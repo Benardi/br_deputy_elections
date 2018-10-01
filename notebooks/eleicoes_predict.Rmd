@@ -1,16 +1,24 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
 ```{r}
+library(gridExtra)
 library(tidyverse)
+library(lattice)
 library(here)
+library(grid)
 ```
+
+# Data Overview
 
 ```{r}
 eleicoes_data <- readr::read_csv(
@@ -42,14 +50,32 @@ eleicoes_data %>%
 
 ```{r}
 eleicoes_data %>%
+  filter(ano == 2006) %>%
   group_by(partido) %>%
   summarize(n = n()) %>%
   ggplot(aes(reorder(partido,n), n)) +
   geom_bar(stat = "identity") + 
   theme(axis.text.x = element_text(angle = 90,
                                    hjust = 1)) +
+  scale_y_continuous(limits = c(0,350)) +
   labs(x="Political Party",
-       y="Absolute Frequency")
+       title="2006 elections",
+       y="Absolute Frequency") -> p1
+
+eleicoes_data %>%
+  filter(ano == 2010) %>%
+  group_by(partido) %>%
+  summarize(n = n()) %>%
+  ggplot(aes(reorder(partido,n), n)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90,
+                                   hjust = 1)) +
+  scale_y_continuous(limits = c(0,350)) +
+  labs(x="Political Party",
+       title="2010 elections",
+       y="Absolute Frequency") -> p2
+
+grid.arrange(p1, p2, ncol=1)
 ```
 
 ```{r}
@@ -57,7 +83,8 @@ eleicoes_data %>%
   ggplot(aes(total_receita)) +
   geom_histogram(bins = 30) +
   labs(x="Total Revenue",
-       y="Absolute Frequency")
+       y="Absolute Frequency") +
+  facet_grid(. ~ ano)
 ```
 
 ```{r}
@@ -65,7 +92,8 @@ eleicoes_data %>%
   ggplot(aes(media_receita)) +
   geom_histogram(bins = 30) +
   labs(x="Mean Revenue",
-       y="Absolute Frequency")
+       y="Absolute Frequency") +
+  facet_grid(. ~ ano)
 ```
 
 ```{r}
@@ -73,7 +101,8 @@ eleicoes_data %>%
   ggplot(aes(total_despesa)) +
   geom_histogram(bins = 30) +
   labs(x="Total Expenditure",
-       y="Absolute Frequency")
+       y="Absolute Frequency") +
+  facet_grid(. ~ ano)
 ```
 
 ```{r}
@@ -81,38 +110,57 @@ eleicoes_data %>%
   ggplot(aes(media_despesa)) +
   geom_histogram(bins = 30) +
   labs(x="Mean Expenditure",
-       y="Absolute Frequency")
+       y="Absolute Frequency") +
+  facet_grid(. ~ ano)
 ```
 
 ```{r}
 eleicoes_data %>%
-  group_by(estado_civil) %>%
+  ggplot(aes(recursos_proprios)) +
+  geom_histogram(bins = 30) +
+  labs(x="Total Revenue",
+       y="Absolute Frequency") +
+  facet_grid(. ~ ano)
+```
+
+```{r}
+eleicoes_data %>%
+  mutate(ano = as.factor(ano)) %>%
+  group_by(estado_civil, ano) %>%
   summarize(n = n()) %>%
-  ggplot(aes(reorder(estado_civil,n), n)) +
-  geom_bar(stat = "identity") + 
-  coord_flip() + 
+  ggplot(aes(reorder(estado_civil,n), n,
+             fill= ano)) +
+  geom_bar(stat = "identity",
+           position = position_dodge(width = 0.5)) + 
   labs(x="Marital status", 
-       y="Absolute Frequency")
+       y="Absolute Frequency") +
+  guides(fill = guide_legend(title = "year")) +
+  coord_flip()
 ```
 
 ```{r}
 eleicoes_data %>%
-  group_by(grau) %>%
+  mutate(ano = as.factor(ano)) %>%
+  group_by(grau, ano) %>%
   summarize(n = n()) %>%
-  ggplot(aes(reorder(grau,n), n)) +
-  geom_bar(stat = "identity") + 
-  coord_flip() + 
+  ggplot(aes(reorder(grau,n), n,
+             fill= ano)) +
+  geom_bar(stat = "identity",
+           position = position_dodge(width = 0.5)) + 
   labs(x="Education level", 
-       y="Absolute Frequency")
+       y="Absolute Frequency") +
+  guides(fill = guide_legend(title = "year")) +
+  coord_flip()
 ```
 
 ```{r}
 eleicoes_data %>%
-  group_by(sexo) %>%
+  group_by(sexo, ano) %>%
   summarize(n = n()) %>%
   ggplot(aes(reorder(sexo,n), n)) +
   geom_bar(stat = "identity") + 
   labs(x="Gender", 
-       y="Absolute Frequency")
+       y="Absolute Frequency") +
+  facet_grid(. ~ano)
 ```
 
