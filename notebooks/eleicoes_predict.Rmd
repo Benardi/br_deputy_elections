@@ -14,6 +14,7 @@ output:
 library(gridExtra)
 library(tidyverse)
 library(lattice)
+library(GGally)
 library(here)
 library(grid)
 ```
@@ -43,6 +44,17 @@ eleicoes_data <- readr::read_csv(
     votos = col_integer(),
     .default = col_character()))
 
+eleicoes_data %>% 
+  mutate(uf = as.factor(uf),
+         nome = as.factor(nome),
+         sexo = as.factor(sexo),
+         grau = as.factor(grau),
+         nome = as.factor(nome),
+         cargo = as.factor(cargo),
+         partido = as.factor(partido),
+         ocupacao = as.factor(ocupacao),
+         estado_civil = as.factor(estado_civil),
+         sequencial_candidato = as.numeric(sequencial_candidato)) -> eleicoes_data
 
 eleicoes_data %>% 
   glimpse()
@@ -121,7 +133,7 @@ eleicoes_data %>%
   labs(x="Total Revenue",
        y="Absolute Frequency") +
   facet_grid(. ~ ano)
-```
+``` 
 
 ```{r}
 eleicoes_data %>%
@@ -162,5 +174,67 @@ eleicoes_data %>%
   labs(x="Gender", 
        y="Absolute Frequency") +
   facet_grid(. ~ano)
+```
+
+```{r}
+require(GGally)
+
+eleicoes_data %>% 
+  filter(ano == 2006) %>%
+  select(-partido,
+         -uf,-nome,
+         -estado_civil,
+         -ocupacao,-ano,
+         -cargo,-grau,-sexo) %>%
+  na.omit() %>%
+  ggcorr(palette = "RdBu",
+         color = "grey50",
+         label = TRUE, hjust = 1,
+         label_size = 3, size = 4,
+         nbreaks = 5, layout.exp = 7) +
+  ggtitle("Correlation plot for 2006 elections")
+```
+
+```{r}
+require(GGally)
+
+eleicoes_data %>% 
+  filter(ano == 2010) %>%
+  select(-partido,
+         -uf,-nome,
+         -estado_civil,
+         -ocupacao,-ano,
+         -cargo,-grau,-sexo) %>%
+  na.omit() %>%
+  ggcorr(palette = "RdBu",
+         color = "grey50",
+         label = TRUE, hjust = 1,
+         label_size = 3, size = 4,
+         nbreaks = 5, layout.exp = 7) +
+  ggtitle("Correlation plot for 2010 elections")
+```
+
+## Splitting Data for Cross Validation
+
+```{r}
+eleicoes_data %>% ## Put numeric predictor variables on same scale 
+   mutate_at(.vars = vars(quantidade_doacoes,
+                          quantidade_doadores,
+                          total_receita,
+                          media_receita,
+                          sequencial_candidato,
+                          recursos_de_outros_candidatos.comites,
+                          recursos_de_pessoas_fisicas,
+                          recursos_de_pessoas_juridicas,
+                          recursos_proprios,
+                          recursos_de_partido_politico,
+                          quantidade_despesas,
+                          quantidade_fornecedores,
+                          total_despesa,
+                          media_despesa),
+             .funs = funs(as.numeric(scale(.)))) -> data_scaled
+
+data_scaled %>%
+  glimpse()
 ```
 
