@@ -238,3 +238,43 @@ data_scaled %>%
   glimpse()
 ```
 
+```{r}
+set.seed(101) # We set the set for reason of reproducibility
+
+## Adding surrogate key to dataframe
+data_scaled$id <- 1:nrow(data_scaled)
+
+data_scaled %>% 
+  dplyr::sample_frac(.7) -> training_data
+
+training_data %>% 
+  glimpse()
+```
+
+```{r}
+dplyr::anti_join(data_scaled, 
+                 training_data, 
+                 by = 'id') -> testing_data
+testing_data %>% 
+  glimpse()
+```
+
+# 2006, All predictors
+
+* **cargo** is a one level factor and for that reason we must refrain from using it in our regression.
+
+```{r}
+mod <- lm(votos ~ sequencial_candidato + nome + uf + partido + quantidade_doacoes + quantidade_doadores +
+                  total_receita +  media_receita + recursos_de_outros_candidatos.comites +
+                  recursos_de_pessoas_fisicas + recursos_de_pessoas_juridicas + recursos_proprios +
+                  recursos_de_partido_politico + quantidade_despesas + quantidade_fornecedores +
+                  total_despesa + media_despesa + sexo + grau + estado_civil + ocupacao,
+          data = training_data)
+
+
+```
+
+```{r}
+glance(mod)
+```
+
