@@ -21,6 +21,8 @@ library(grid)
 
 # Data Overview
 
+## Loading Data
+
 ```{r}
 eleicoes_data <- readr::read_csv(
   here::here('data/eleicoes_2006_e_2010.csv'), 
@@ -59,6 +61,8 @@ eleicoes_data %>%
 eleicoes_data %>% 
   glimpse()
 ```
+
+## Data Exploration
 
 ```{r}
 eleicoes_data %>%
@@ -214,13 +218,36 @@ eleicoes_data %>%
   ggtitle("Correlation plot for 2010 elections")
 ```
 
-## Splitting Data for Cross Validation (2006)
+
+## Should we use all variables?
+
+#### A multivariate linear regression model made with all variables wouldn't be feasible
+
+* **cargo** is a one level factor and for that reason we must refrain from using it in our regression.
+* **sequencial_candidato** isn't meaningful at all as the correlogram clearly showed
+
+<br>
+
+***
+
+<br>
+
+# Linear Model for 2006 elections
+
+<br>
+
+## Split Data for Cross Validation
 
 ```{r}
 eleicoes_data %>% ## Put numeric predictor variables on same scale 
+   mutate(recursos_totais = recursos_de_pessoas_fisicas +
+                            recursos_de_outros_candidatos.comites +
+                            recursos_de_pessoas_juridicas +
+                            recursos_proprios ) %>%
    filter(ano == 2006) %>%
    mutate_at(.vars = vars(quantidade_doacoes,
                           quantidade_doadores,
+                          recursos_totais,
                           total_receita,
                           media_receita,
                           sequencial_candidato,
@@ -233,44 +260,132 @@ eleicoes_data %>% ## Put numeric predictor variables on same scale
                           quantidade_fornecedores,
                           total_despesa,
                           media_despesa),
-             .funs = funs(as.numeric(scale(.)))) -> data_scaled
+             .funs = funs(as.numeric(scale(.)))) -> data_scaled_2006
 
-data_scaled %>%
-  glimpse()
+data_scaled_2006 %>%
+  sample_n(5)
 ```
 
-```{r}
+```{r results='asis'}
 set.seed(101) # We set the set for reason of reproducibility
 
 ## Adding surrogate key to dataframe
-data_scaled$id <- 1:nrow(data_scaled)
+data_scaled_2006$id <- 1:nrow(data_scaled_2006)
 
-data_scaled %>% 
-  dplyr::sample_frac(.7) -> training_data
+data_scaled_2006 %>% 
+  dplyr::sample_frac(.7) -> train_data_2006
 
-training_data %>% 
-  glimpse()
+cat("#### Train Data ",
+    "\n##### Observations: ",nrow(train_data_2006),
+    "\n##### Variables: ",ncol(train_data_2006))
 ```
 
-```{r}
+<br>
+
+```{r results='asis'}
 dplyr::anti_join(data_scaled, 
-                 training_data, 
-                 by = 'id') -> testing_data
-testing_data %>% 
-  glimpse()
+                 train_data_2006, 
+                 by = 'id') -> testing_data_2006
+
+cat("#### Test Data ",
+    "\n##### Observations: ",nrow(testing_data_2006),
+    "\n##### Variables: ",ncol(testing_data_2006))
 ```
 
-# 2006, All predictors
+<br>
 
-* **cargo** is a one level factor and for that reason we must refrain from using it in our regression.
+
 
 ```{r}
-mod <- lm(votos ~ total_receita * total_despesa + partido * estado_civil + 
-                  media_despesa * grau + recursos_de_partido_politico * partido + 
-                  quantidade_fornecedores * partido + media_despesa * partido +
+mod <- lm(votos ~ quantidade_fornecedores * partido + media_despesa * partido +
+                  total_receita * total_despesa + partido * estado_civil + 
                   recursos_de_outros_candidatos.comites * ocupacao +
-                  uf * total_despesa + total_receita * partido + 
-                  total_despesa * partido + sexo * uf,
-          data = training_data)
+                  uf * total_despesa + total_receita * partido +
+                  recursos_de_partido_politico * partido + 
+                  recursos_totais * quantidade_doadores +
+                  total_despesa * partido  + 
+                  uf * recursos_proprios ,
+          data = train_data_2006)
 broom::glance(mod)
 ```
+
+<br>
+
+# Linear Model for 2010 elections
+
+<br>
+
+## Split Data for Cross Validation
+
+```{r}
+eleicoes_data %>% ## Put numeric predictor variables on same scale 
+   mutate(recursos_totais = recursos_de_pessoas_fisicas +
+                            recursos_de_outros_candidatos.comites +
+                            recursos_de_pessoas_juridicas +
+                            recursos_proprios ) %>%
+   filter(ano == 2010) %>%
+   mutate_at(.vars = vars(quantidade_doacoes,
+                          quantidade_doadores,
+                          recursos_totais,
+                          total_receita,
+                          media_receita,
+                          sequencial_candidato,
+                          recursos_de_outros_candidatos.comites,
+                          recursos_de_pessoas_fisicas,
+                          recursos_de_pessoas_juridicas,
+                          recursos_proprios,
+                          recursos_de_partido_politico,
+                          quantidade_despesas,
+                          quantidade_fornecedores,
+                          total_despesa,
+                          media_despesa),
+             .funs = funs(as.numeric(scale(.)))) -> data_scaled_2010
+
+data_scaled_2010 %>%
+  sample_n(5)
+```
+
+```{r results='asis'}
+set.seed(101) # We set the set for reason of reproducibility
+
+## Adding surrogate key to dataframe
+data_scaled_2010$id <- 1:nrow(data_scaled_2010)
+
+data_scaled_2010 %>% 
+  dplyr::sample_frac(.7) -> train_data_2010
+
+cat("#### Train Data ",
+    "\n##### Observations: ",nrow(train_data_2010),
+    "\n##### Variables: ",ncol(train_data_2010))
+```
+
+<br>
+
+```{r results='asis'}
+dplyr::anti_join(data_scaled_2010, 
+                 train_data_2010, 
+                 by = 'id') -> testing_data_2010
+
+cat("#### Test Data ",
+    "\n##### Observations: ",nrow(testing_data_2010),
+    "\n##### Variables: ",ncol(testing_data_2010))
+```
+
+<br>
+
+
+
+```{r}
+mod <- lm(votos ~ quantidade_fornecedores * partido + media_despesa * partido +
+                  total_receita * total_despesa + partido * estado_civil + 
+                  recursos_de_outros_candidatos.comites * ocupacao +
+                  uf * total_despesa + total_receita * partido +
+                  recursos_de_partido_politico * partido + 
+                  recursos_totais * quantidade_doadores +
+                  total_despesa * partido  + 
+                  uf * recursos_proprios ,
+          data = train_data_2010)
+broom::glance(mod)
+```
+
+
