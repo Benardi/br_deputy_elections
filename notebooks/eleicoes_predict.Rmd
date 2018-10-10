@@ -208,8 +208,6 @@ eleicoes_data %>%
 ```
 
 ```{r}
-require(GGally)
-
 eleicoes_data %>% 
   filter(ano == 2006) %>%
   select(-partido,
@@ -227,8 +225,6 @@ eleicoes_data %>%
 ```
 
 ```{r}
-require(GGally)
-
 eleicoes_data %>% 
   filter(ano == 2010) %>%
   select(-partido,
@@ -245,6 +241,21 @@ eleicoes_data %>%
   ggtitle("Correlation plot for 2010 elections")
 ```
 
+```{r}
+eleicoes_data %>% 
+  select(-partido,
+         -uf,-nome,
+         -estado_civil,
+         -ocupacao,-ano,
+         -cargo,-grau,-sexo) %>%
+  na.omit() %>%
+  ggcorr(palette = "RdBu",
+         color = "grey50",
+         label = TRUE, hjust = 1,
+         label_size = 3, size = 4,
+         nbreaks = 5, layout.exp = 7) +
+  ggtitle("Correlation plot for both elections")
+```
 
 ## Should we use all variables?
 
@@ -534,7 +545,7 @@ mod_2006 %>%
              linetype="dashed") + 
   labs(y="Residuals",
        x="Fitted values",
-       title="Residual vs Fitted Plot (2006)")
+       title="Residual vs Fitted Plot (2006 elections)")
 ```
 
 ```{r}
@@ -547,7 +558,7 @@ mod_2010 %>%
              linetype="dashed") + 
   labs(y="Residuals",
        x="Fitted values",
-       title="Residual vs Fitted Plot (2010)")
+       title="Residual vs Fitted Plot (2010 elections)")
 ```
 
 #### Normal Q-Q
@@ -715,7 +726,7 @@ mod_2006 %>%
              linetype="dashed") + 
   labs(y="Residuals",
        x="Fitted values",
-       title="Residual vs Fitted Plot (2006)")
+       title="Residual vs Fitted Plot (2006 elections)")
 ```
 
 ```{r}
@@ -809,7 +820,7 @@ mod_2010 %>%
              linetype="dashed") + 
   labs(y="Residuals",
        x="Fitted values",
-       title="Residual vs Fitted Plot (2010)")
+       title="Residual vs Fitted Plot (2010 elections)")
 ```
 
 ```{r}
@@ -972,7 +983,7 @@ mod %>%
              linetype="dashed") + 
   labs(y="Residuals",
        x="Fitted values",
-       title="Residual vs Fitted Plot (2010)")
+       title="Residual vs Fitted Plot")
 ```
 
 ```{r}
@@ -980,7 +991,7 @@ mod %>%
   ggplot(aes(sample=rstandard(.))) +
   stat_qq(na.rm = TRUE,
           shape=1,size=3) +      # open circles
-  labs(title="Normal Q-Q (2010 elections)",        # plot title
+  labs(title="Normal Q-Q",        # plot title
   x="Theoretical Quantiles",      # x-axis label
   y="Standardized Residuals") +   # y-axis label +
   geom_abline(color = "red",
@@ -995,7 +1006,7 @@ mod %>%
   geom_point(na.rm=TRUE) + 
   stat_smooth(method="loess",
               na.rm = TRUE) +
-  labs(title = "Scale-Location (2010 elections)",
+  labs(title = "Scale-Location",
        x= "Fitted Value",
        y = expression(sqrt("|Standardized residuals|")))
 ```
@@ -1006,7 +1017,7 @@ mod %>%
   geom_point(aes(size=.cooksd), na.rm=TRUE) +
   stat_smooth(method="loess", na.rm=TRUE) +
   xlab("Leverage")+ylab("Standardized Residuals") + 
-  ggtitle("Residual vs Leverage Plot (2010 elections)") + 
+  ggtitle("Residual vs Leverage Plot") + 
   scale_size_continuous("Cook's Distance", range=c(1,5)) +    
   theme(legend.position="bottom")
 ```
@@ -1017,7 +1028,7 @@ mod %>%
   geom_point(na.rm=TRUE) + 
   stat_smooth(method="loess", na.rm=TRUE) + 
   xlab("Leverage hii")+ylab("Cook's Distance") + 
-  ggtitle("Cook's dist vs Leverage hii/(1-hii) (2010 elections)") + 
+  ggtitle("Cook's dist vs Leverage hii/(1-hii)") + 
   geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
 ```
 
