@@ -11,10 +11,13 @@ output:
 ---
 
 ```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+
+library(dataPreparation)
 library(gridExtra)
 library(tidyverse)
 library(lattice)
 library(GGally)
+library(caret)
 library(here)
 library(grid)
 
@@ -52,33 +55,19 @@ eleicoes_data <- readr::read_csv(
 ```{r}
 eleicoes_data %>% 
   mutate(nome = toupper(nome),
-         recursos_totais = recursos_de_pessoas_fisicas +
-                           recursos_de_outros_candidatos.comites +
-                           recursos_de_pessoas_juridicas +
-                           recursos_proprios,
          sexo = toupper(sexo),
          grau = toupper(grau),
          nome = toupper(nome),
          cargo = toupper(cargo),
          ocupacao = toupper(ocupacao),
          partido = toupper(partido),
-         estado_civil = toupper(estado_civil)) %>%
-  mutate(uf = as.factor(uf),
-         nome = as.factor(nome),
-         sexo = as.factor(sexo),
-         grau = as.factor(grau),
-         nome = as.factor(nome),
-         cargo = as.factor(cargo),
-         partido = as.factor(partido),
-         ocupacao = as.factor(ocupacao),
-         estado_civil = as.factor(estado_civil),
+         estado_civil = toupper(estado_civil),
          sequencial_candidato = as.numeric(sequencial_candidato)) -> eleicoes_data
 
 eleicoes_data %>% 
   glimpse()
 
 ```
-
 
 ## Data Exploration
 
@@ -261,7 +250,6 @@ eleicoes_data %>% ## Put numeric predictor variables on same scale
    filter(ano == 2006) %>%
    mutate_at(.vars = vars(quantidade_doacoes,
                           quantidade_doadores,
-                          recursos_totais,
                           total_receita,
                           media_receita,
                           sequencial_candidato,
@@ -281,13 +269,23 @@ data_scaled_2006 %>%
 ```
 
 ```{r results='asis'}
-set.seed(101) # We set the set for reason of reproducibility
+set.seed(11) # We set the set for reason of reproducibility
 
 ## Adding surrogate key to dataframe
 data_scaled_2006$id <- 1:nrow(data_scaled_2006)
 
 data_scaled_2006 %>% 
   dplyr::sample_frac(.5) -> train_data_2006
+
+encoding <- build_encoding(dataSet = train_data_2006,
+                           cols = c("uf","sexo","grau",
+                                    "partido","estado_civil"),
+                           verbose = F)
+
+train_data_2006 <- one_hot_encoder(dataSet = train_data_2006,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
 
 cat("#### Train Data ",
     "\n##### Observations: ",nrow(train_data_2006),
@@ -297,7 +295,7 @@ cat("#### Train Data ",
 <br>
 
 ```{r results='asis'}
-set.seed(101) # We set the set for reason of reproducibility
+set.seed(11) # We set the set for reason of reproducibility
 
 dplyr::anti_join(data_scaled_2006, 
                  train_data_2006, 
@@ -306,18 +304,28 @@ dplyr::anti_join(data_scaled_2006,
 intermediate_data %>% 
   dplyr::sample_frac(.5) -> test_data_2006
 
+test_data_2006 <- one_hot_encoder(dataSet = test_data_2006,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
+
 cat("#### Test Data ",
     "\n##### Observations: ",nrow(test_data_2006),
     "\n##### Variables: ",ncol(test_data_2006))
 ```
 
 ```{r results='asis'}
-set.seed(101) # We set the set for reason of reproducibility
+set.seed(11) # We set the set for reason of reproducibility
 
 dplyr::anti_join(intermediate_data, 
                  test_data_2006, 
                  by = 'id') -> validate_data_2006
 
+
+validate_data_2006 <- one_hot_encoder(dataSet = validate_data_2006,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
 rm(intermediate_data)
 
 cat("#### Validate Data ",
@@ -327,16 +335,10 @@ cat("#### Validate Data ",
 
 <br>
 
-
 ```{r}
-mod_2006 <- lm(votos ~ quantidade_fornecedores * partido + media_despesa * partido +
-                  total_receita * total_despesa + partido * estado_civil + 
-                  recursos_de_outros_candidatos.comites * ocupacao +
-                  uf * total_despesa + total_receita * partido +
-                  recursos_de_partido_politico * partido + 
-                  recursos_totais * quantidade_doadores +
-                  total_despesa * partido  + 
-                  uf * recursos_proprios ,
+mod_2006 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * partido.PMDB +
+                  total_receita * total_despesa + uf.SP * estado.civil.CASADO.A. + 
+                  uf.RJ * total_despesa + total_receita * `grau.SUPERIOR COMPLETO`,
           data = train_data_2006)
 
 broom::glance(mod_2006)
@@ -361,7 +363,6 @@ eleicoes_data %>% ## Put numeric predictor variables on same scale
    filter(ano == 2010) %>%
    mutate_at(.vars = vars(quantidade_doacoes,
                           quantidade_doadores,
-                          recursos_totais,
                           total_receita,
                           media_receita,
                           sequencial_candidato,
@@ -381,13 +382,23 @@ data_scaled_2010 %>%
 ```
 
 ```{r results='asis'}
-set.seed(101) # We set the set for reason of reproducibility
+set.seed(11) # We set the set for reason of reproducibility
 
 ## Adding surrogate key to dataframe
 data_scaled_2010$id <- 1:nrow(data_scaled_2010)
 
 data_scaled_2010 %>% 
   dplyr::sample_frac(.5) -> train_data_2010
+
+encoding <- build_encoding(dataSet = train_data_2010,
+                           cols = c("uf","sexo","grau",
+                                    "partido","estado_civil"),
+                           verbose = T)
+
+train_data_2010 <- one_hot_encoder(dataSet = train_data_2010,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
 
 cat("#### Train Data ",
     "\n##### Observations: ",nrow(train_data_2010),
@@ -397,7 +408,7 @@ cat("#### Train Data ",
 <br>
 
 ```{r results='asis'}
-set.seed(101) # We set the set for reason of reproducibility
+set.seed(11) # We set the set for reason of reproducibility
 
 dplyr::anti_join(data_scaled_2010, 
                  train_data_2010, 
@@ -406,17 +417,27 @@ dplyr::anti_join(data_scaled_2010,
 intermediate_data %>% 
   dplyr::sample_frac(.5) -> test_data_2010
 
+test_data_2010 <- one_hot_encoder(dataSet = test_data_2010,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
+
 cat("#### Test Data ",
     "\n##### Observations: ",nrow(test_data_2010),
     "\n##### Variables: ",ncol(test_data_2010))
 ```
 
 ```{r results='asis'}
-set.seed(101) # We set the set for reason of reproducibility
+set.seed(11) # We set the set for reason of reproducibility
 
 dplyr::anti_join(intermediate_data, 
                  test_data_2010, 
                  by = 'id') -> validate_data_2010
+
+validate_data_2010 <- one_hot_encoder(dataSet = validate_data_2010,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
 
 rm(intermediate_data)
 
@@ -428,15 +449,11 @@ cat("#### Validate Data ",
 <br>
 
 ```{r}
-mod_2010 <- lm(votos ~ quantidade_fornecedores * partido + media_despesa * partido +
-                  total_receita * total_despesa + partido * estado_civil + 
-                  recursos_de_outros_candidatos.comites * ocupacao +
-                  uf * total_despesa + total_receita * partido +
-                  recursos_de_partido_politico * partido + 
-                  recursos_totais * quantidade_doadores +
-                  total_despesa * partido  + 
-                  uf * recursos_proprios ,
+mod_2010 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * partido.PMDB +
+                  total_receita * total_despesa + uf.SP * estado.civil.CASADO.A. + 
+                  uf.RJ * total_despesa + total_receita * `grau.SUPERIOR COMPLETO`,
           data = train_data_2010)
+
 broom::glance(mod_2010)
 ```
 
@@ -674,3 +691,44 @@ mod_2010 %>%
   geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
 ```
 
+## Cross Validation
+
+```{r}
+predictions <- mod_2006 %>% predict(validate_data_2006)
+
+data.frame( R2 = caret::R2(predictions, validate_data_2006$votos),
+            RMSE = caret::RMSE(predictions, validate_data_2006$votos),
+            MAE = caret::MAE(predictions, validate_data_2006$votos),
+            ERR = caret::RMSE(predictions, validate_data_2006$votos)/
+              mean(validate_data_2006$votos))
+```
+
+```{r}
+predictions <- mod_2010 %>% predict(validate_data_2010)
+
+data.frame( R2 = caret::R2(predictions, validate_data_2010$votos),
+            RMSE = caret::RMSE(predictions, validate_data_2010$votos),
+            MAE = caret::MAE(predictions, validate_data_2010$votos),
+            ERR = caret::RMSE(predictions, validate_data_2010$votos)/
+              mean(validate_data_2010$votos))
+```
+
+```{r}
+predictions <- mod_2006 %>% predict(test_data_2006)
+
+data.frame( R2 = caret::R2(predictions, test_data_2006$votos),
+            RMSE = caret::RMSE(predictions, test_data_2006$votos),
+            MAE = caret::MAE(predictions, test_data_2006$votos),
+            ERR = caret::RMSE(predictions, test_data_2006$votos)/
+              mean(test_data_2006$votos))
+```
+
+```{r}
+predictions <- mod_2010 %>% predict(test_data_2010)
+
+data.frame( R2 = caret::R2(predictions, test_data_2010$votos),
+            RMSE = caret::RMSE(predictions, test_data_2010$votos),
+            MAE = caret::MAE(predictions, test_data_2010$votos),
+            ERR = caret::RMSE(predictions, test_data_2010$votos)/
+              mean(test_data_2010$votos))
+```
