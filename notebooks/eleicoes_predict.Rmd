@@ -385,7 +385,7 @@ scaled_data_2010 %>%
 encoding <- build_encoding(dataSet = train_data_2010,
                            cols = c("uf","sexo","grau",
                                     "partido","estado_civil"),
-                           verbose = T)
+                           verbose = F)
 
 train_data_2010 <- one_hot_encoder(dataSet = train_data_2010,
                            encoding = encoding,
@@ -879,4 +879,167 @@ data.frame( R2 = caret::R2(predictions, test_data_2010$votos),
             MAE = caret::MAE(predictions, test_data_2010$votos),
             ERR = caret::RMSE(predictions, test_data_2010$votos)/
               mean(test_data_2010$votos))
+```
+
+# Model for both elections
+
+## Split data for cross validation
+
+```{r results='asis'}
+set.seed(11) # We set the set for reason of reproducibility
+
+## Adding surrogate key to dataframe
+scaled_data$id <- 1:nrow(scaled_data)
+
+scaled_data %>% 
+  dplyr::sample_frac(.5) -> train_data
+
+encoding <- build_encoding(dataSet = train_data,
+                           cols = c("uf","sexo","grau",
+                                    "partido","estado_civil"),
+                           verbose = F)
+
+train_data <- one_hot_encoder(dataSet = train_data,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
+
+cat("#### Train Data ",
+    "\n##### Observations: ",nrow(train_data),
+    "\n##### Variables: ",ncol(train_data))
+```
+
+<br>
+
+```{r results='asis'}
+set.seed(11) # We set the set for reason of reproducibility
+
+dplyr::anti_join(scaled_data, 
+                 train_data, 
+                 by = 'id') -> intermediate_data
+
+intermediate_data %>% 
+  dplyr::sample_frac(.5) -> test_data
+
+test_data <- one_hot_encoder(dataSet = test_data,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
+
+cat("#### Test Data ",
+    "\n##### Observations: ",nrow(test_data),
+    "\n##### Variables: ",ncol(test_data))
+```
+
+```{r results='asis'}
+set.seed(11) # We set the set for reason of reproducibility
+
+dplyr::anti_join(intermediate_data, 
+                 test_data, 
+                 by = 'id') -> validate_data
+
+validate_data <- one_hot_encoder(dataSet = validate_data,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
+
+rm(intermediate_data)
+
+cat("#### Validate Data ",
+    "\n##### Observations: ",nrow(validate_data),
+    "\n##### Variables: ",ncol(validate_data))
+```
+
+
+```{r}
+mod <- lm(votos ~ total_receita * total_despesa,
+          data = train_data)
+
+broom::glance(mod)
+```
+
+## Residue Analysis
+
+<br>
+
+```{r}
+mod %>%
+  ggplot(aes(.fitted, .resid)) + 
+  geom_point() +
+  stat_smooth(method="loess") + 
+  geom_hline(col="red",
+             yintercept=0,
+             linetype="dashed") + 
+  labs(y="Residuals",
+       x="Fitted values",
+       title="Residual vs Fitted Plot (2010)")
+```
+
+```{r}
+mod %>%
+  ggplot(aes(sample=rstandard(.))) +
+  stat_qq(na.rm = TRUE,
+          shape=1,size=3) +      # open circles
+  labs(title="Normal Q-Q (2010 elections)",        # plot title
+  x="Theoretical Quantiles",      # x-axis label
+  y="Standardized Residuals") +   # y-axis label +
+  geom_abline(color = "red",
+              size = 0.8,
+              linetype="dashed")  # dashed reference line
+```
+
+```{r}
+mod %>%
+  ggplot(aes(.fitted, 
+             sqrt(abs(.stdresid)))) + 
+  geom_point(na.rm=TRUE) + 
+  stat_smooth(method="loess",
+              na.rm = TRUE) +
+  labs(title = "Scale-Location (2010 elections)",
+       x= "Fitted Value",
+       y = expression(sqrt("|Standardized residuals|")))
+```
+
+```{r}
+mod %>%
+  ggplot(aes(.hat, .stdresid)) + 
+  geom_point(aes(size=.cooksd), na.rm=TRUE) +
+  stat_smooth(method="loess", na.rm=TRUE) +
+  xlab("Leverage")+ylab("Standardized Residuals") + 
+  ggtitle("Residual vs Leverage Plot (2010 elections)") + 
+  scale_size_continuous("Cook's Distance", range=c(1,5)) +    
+  theme(legend.position="bottom")
+```
+
+```{r}
+mod %>%
+  ggplot(aes(.hat, .cooksd)) + 
+  geom_point(na.rm=TRUE) + 
+  stat_smooth(method="loess", na.rm=TRUE) + 
+  xlab("Leverage hii")+ylab("Cook's Distance") + 
+  ggtitle("Cook's dist vs Leverage hii/(1-hii) (2010 elections)") + 
+  geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
+```
+
+
+## Cross Validation
+
+```{r}
+predictions <- mod %>% predict(validate_data)
+
+data.frame( R2 = caret::R2(predictions, validate_data$votos),
+            RMSE = caret::RMSE(predictions, validate_data$votos),
+            MAE = caret::MAE(predictions, validate_data$votos),
+            ERR = caret::RMSE(predictions, validate_data$votos)/
+              mean(validate_data$votos))
+```
+
+```{r}
+predictions <- mod %>% predict(test_data)
+
+data.frame( R2 = caret::R2(predictions, test_data$votos),
+            RMSE = caret::RMSE(predictions, test_data$votos),
+            MAE = caret::MAE(predictions, test_data$votos),
+            ERR = caret::RMSE(predictions, test_data$votos)/
+              mean(test_data$votos))
 ```
