@@ -52,6 +52,10 @@ eleicoes_data <- readr::read_csv(
 ```{r}
 eleicoes_data %>% 
   mutate(nome = toupper(nome),
+         recursos_totais = recursos_de_pessoas_fisicas +
+                           recursos_de_outros_candidatos.comites +
+                           recursos_de_pessoas_juridicas +
+                           recursos_proprios,
          sexo = toupper(sexo),
          grau = toupper(grau),
          nome = toupper(nome),
@@ -254,10 +258,6 @@ eleicoes_data %>%
 
 ```{r}
 eleicoes_data %>% ## Put numeric predictor variables on same scale 
-   mutate(recursos_totais = recursos_de_pessoas_fisicas +
-                            recursos_de_outros_candidatos.comites +
-                            recursos_de_pessoas_juridicas +
-                            recursos_proprios ) %>%
    filter(ano == 2006) %>%
    mutate_at(.vars = vars(quantidade_doacoes,
                           quantidade_doadores,
@@ -287,7 +287,7 @@ set.seed(101) # We set the set for reason of reproducibility
 data_scaled_2006$id <- 1:nrow(data_scaled_2006)
 
 data_scaled_2006 %>% 
-  dplyr::sample_frac(.7) -> train_data_2006
+  dplyr::sample_frac(.5) -> train_data_2006
 
 cat("#### Train Data ",
     "\n##### Observations: ",nrow(train_data_2006),
@@ -297,17 +297,35 @@ cat("#### Train Data ",
 <br>
 
 ```{r results='asis'}
+set.seed(101) # We set the set for reason of reproducibility
+
 dplyr::anti_join(data_scaled_2006, 
                  train_data_2006, 
-                 by = 'id') -> testing_data_2006
+                 by = 'id') -> intermediate_data
+
+intermediate_data %>% 
+  dplyr::sample_frac(.5) -> test_data_2006
 
 cat("#### Test Data ",
-    "\n##### Observations: ",nrow(testing_data_2006),
-    "\n##### Variables: ",ncol(testing_data_2006))
+    "\n##### Observations: ",nrow(test_data_2006),
+    "\n##### Variables: ",ncol(test_data_2006))
+```
+
+```{r results='asis'}
+set.seed(101) # We set the set for reason of reproducibility
+
+dplyr::anti_join(intermediate_data, 
+                 test_data_2006, 
+                 by = 'id') -> validate_data_2006
+
+rm(intermediate_data)
+
+cat("#### Validate Data ",
+    "\n##### Observations: ",nrow(validate_data_2006),
+    "\n##### Variables: ",ncol(validate_data_2006))
 ```
 
 <br>
-
 
 
 ```{r}
@@ -340,10 +358,6 @@ broom::tidy(mod_2006,
 
 ```{r}
 eleicoes_data %>% ## Put numeric predictor variables on same scale 
-   mutate(recursos_totais = recursos_de_pessoas_fisicas +
-                            recursos_de_outros_candidatos.comites +
-                            recursos_de_pessoas_juridicas +
-                            recursos_proprios ) %>%
    filter(ano == 2010) %>%
    mutate_at(.vars = vars(quantidade_doacoes,
                           quantidade_doadores,
@@ -373,7 +387,7 @@ set.seed(101) # We set the set for reason of reproducibility
 data_scaled_2010$id <- 1:nrow(data_scaled_2010)
 
 data_scaled_2010 %>% 
-  dplyr::sample_frac(.7) -> train_data_2010
+  dplyr::sample_frac(.5) -> train_data_2010
 
 cat("#### Train Data ",
     "\n##### Observations: ",nrow(train_data_2010),
@@ -383,18 +397,35 @@ cat("#### Train Data ",
 <br>
 
 ```{r results='asis'}
+set.seed(101) # We set the set for reason of reproducibility
+
 dplyr::anti_join(data_scaled_2010, 
                  train_data_2010, 
-                 by = 'id') -> testing_data_2010
+                 by = 'id') -> intermediate_data
+
+intermediate_data %>% 
+  dplyr::sample_frac(.5) -> test_data_2010
 
 cat("#### Test Data ",
-    "\n##### Observations: ",nrow(testing_data_2010),
-    "\n##### Variables: ",ncol(testing_data_2010))
+    "\n##### Observations: ",nrow(test_data_2010),
+    "\n##### Variables: ",ncol(test_data_2010))
+```
+
+```{r results='asis'}
+set.seed(101) # We set the set for reason of reproducibility
+
+dplyr::anti_join(intermediate_data, 
+                 test_data_2010, 
+                 by = 'id') -> validate_data_2010
+
+rm(intermediate_data)
+
+cat("#### Validate Data ",
+    "\n##### Observations: ",nrow(validate_data_2010),
+    "\n##### Variables: ",ncol(validate_data_2010))
 ```
 
 <br>
-
-
 
 ```{r}
 mod_2010 <- lm(votos ~ quantidade_fornecedores * partido + media_despesa * partido +
