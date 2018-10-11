@@ -1005,6 +1005,10 @@ mod_2006 <- lm(votos ~ total_receita * total_despesa,
 broom::glance(mod_2006)
 ```
 
+* As the quality metric come from training they aren't that meaningful
+    + A decent $R^2$ and $adjusted \thinspace R^2$ very close to the original model.
+    + The $F \thinspace statistic$ (statistic) is way bigger than 1 (a good sign) and better than the one from the original model. 
+    
 ### Residue Analysis
 
 ```{r}
@@ -1020,6 +1024,9 @@ mod_2006 %>%
        title="Residual vs Fitted Plot (2006 elections)")
 ```
 
+* There's indication, although not so strong, of a pattern in the residual vs fitted, this is a bad sign for the analyzed model.
+    + Pattern stronger than the one from the original model.
+
 ```{r}
 mod_2006 %>%
   ggplot(aes(sample=rstandard(.))) +
@@ -1033,6 +1040,9 @@ mod_2006 %>%
               linetype="dashed")  # dashed reference line
 ```
 
+* Our residuals somewhat deviate from (not normally distributed). As we have a relatively mild deviation we have a negative yet mild sign for our model.
+    + Results similar to original model.
+
 ```{r}
 mod_2006 %>%
   ggplot(aes(.fitted, 
@@ -1045,6 +1055,9 @@ mod_2006 %>%
        y = expression(sqrt("|Standardized residuals|")))
 ```
 
+* The residuals are not equally spread. Our model has violated the assumption of $homoscedasticity$ (equal variance)
+    + Violation slightly stronger here.
+
 ```{r}
 mod_2006 %>%
   ggplot(aes(.hat, .stdresid)) + 
@@ -1056,6 +1069,8 @@ mod_2006 %>%
   theme(legend.position="bottom")
 ```
 
+* We can see no outliers that would drastically change the results of our model.
+
 ```{r}
 mod_2006 %>%
   ggplot(aes(.hat, .cooksd)) + 
@@ -1065,6 +1080,8 @@ mod_2006 %>%
   ggtitle("Cook's dist vs Leverage hii/(1-hii) (2006 elections)") + 
   geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
 ```
+
+* Here we see indication of a somewhat more influential data point (still within acceptable range).
 
 ### Cross Validation
 
@@ -1078,6 +1095,14 @@ data.frame( R2 = caret::R2(predictions, validate_data_2006$votos),
               mean(validate_data_2006$votos))
 ```
 
+Now let’s talk about the results taken from the validate data (more meaningful).
+
+* We got a decent 0.58 R² and adjusted R² approximately. This means that this model explain approximately 58% of the response variable variability.
+* The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 30180.23.
+    + Our model would miss the mark by approximately 30180 (RMSE), that is if candidate had one million votes we would predict 30180 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13105.71.
+* The prediction error rate (ERR) was 1.300661.
+
 ```{r}
 predictions <- mod_2006 %>% predict(test_data_2006)
 
@@ -1088,6 +1113,16 @@ data.frame( R2 = caret::R2(predictions, test_data_2006$votos),
               mean(test_data_2006$votos))
 ```
 
+Now let’s talk about the results taken from the validate data (more meaningful).
+
+* We got a decent 0.52 R² and adjusted R² approximately. This means that this model explain approximately 52% of the response variable variability.
+* The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 30919.08.
+    + Our model would miss the mark by approximately 30919 (RMSE), that is if candidate had one million votes we would predict 30919 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13605.23.
+* The prediction error rate (ERR) was 1.321325.
+
+> Our skimmed model fared worse on validation but had a slightly better result in test than the original model.
+
 ## 2010 elections skimmed model
 
 ```{r}
@@ -1096,6 +1131,10 @@ mod_2010 <- lm(votos ~ total_receita * total_despesa,
 
 broom::glance(mod_2010)
 ```
+
+* As the quality metric come from training they aren't that meaningful
+    + A decent $R^2$ and $adjusted \thinspace R^2$ very close to the original model.
+    + The $F \thinspace statistic$ (statistic) is way bigger than 1 (a good sign) and better than the one from the original model. 
 
 ## Residue Analysis
 
@@ -1114,6 +1153,9 @@ mod_2010 %>%
        title="Residual vs Fitted Plot (2010 elections)")
 ```
 
+* Here we can see rather equally spread (could be better) residuals around a horizontal line without distinct patterns. A good sign for the model.
+    + Results slightly worse than ones from original model.
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(sample=rstandard(.))) +
@@ -1127,6 +1169,9 @@ mod_2010 %>%
               linetype="dashed")  # dashed reference line
 ```
 
+* Although not perfect we can see that the residuals for this model are closer to normally distributed.
+    + Results slightly worse than ones from original model.
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(.fitted, 
@@ -1139,6 +1184,9 @@ mod_2010 %>%
        y = expression(sqrt("|Standardized residuals|")))
 ```
 
+* Here we see a scenario similar to the one we just witnessed, but in the case of this model the residuals are closer to equally spread. 
+    + Results somewhat better than ones from original model.
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(.hat, .stdresid)) + 
@@ -1150,6 +1198,8 @@ mod_2010 %>%
   theme(legend.position="bottom")
 ```
 
+* We can see no outliers that would drastically change the results of our model.
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(.hat, .cooksd)) + 
@@ -1160,6 +1210,7 @@ mod_2010 %>%
   geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
 ```
 
+* We can see no outliers that would drastically change the results of our model.
 
 ## Cross Validation
 
@@ -1173,7 +1224,7 @@ data.frame( R2 = caret::R2(predictions, validate_data_2010$votos),
               mean(validate_data_2010$votos))
 ```
 
-Now let’s talk about the results taken from the test data (more meaningful).
+Now let’s talk about the results taken from the validate data (more meaningful).
 
 * We got a decent 0.62 R² and adjusted R² approximately. This means that this model explain approximately 62% of the response variable variability.
 * The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 27648.34.
