@@ -455,6 +455,10 @@ eleicoes_data %>%
 
 ### Split Data for Cross Validation
 
+<br>
+
+* Let's use the $50/25/25$ proportions for the train,validate and test datasets
+
 ```{r}
 scaled_data %>%  
    filter(ano == 2006) -> scaled_data_2006
@@ -527,6 +531,8 @@ cat("#### Validate Data ",
 
 <br>
 
+### Train the model
+
 ```{r}
 mod_2006 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * partido.PMDB +
                   total_receita * total_despesa + uf.SP * estado.civil.CASADO.A. + 
@@ -535,6 +541,10 @@ mod_2006 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * 
 
 broom::glance(mod_2006)
 ```
+
+* As the quality metric come from training they aren't that meaningful
+    + A decent $R^2$ and $adjusted \thinspace R^2$.
+    + The $F \thinspace statistic$ (statistic) is way bigger than 1 (a good sign). 
 
 ```{r}
 broom::tidy(mod_2006,
@@ -549,6 +559,10 @@ broom::tidy(mod_2006,
 <br>
 
 ### Split Data for Cross Validation
+
+<br>
+
+* Let's use the $50/25/25$ proportions for the train,validate and test datasets
 
 ```{r}
 scaled_data %>%
@@ -625,6 +639,8 @@ cat("#### Validate Data ",
 
 <br>
 
+## Train the model
+
 ```{r}
 mod_2010 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * partido.PMDB +
                   total_receita * total_despesa + uf.SP * estado.civil.CASADO.A. + 
@@ -633,6 +649,10 @@ mod_2010 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * 
 
 broom::glance(mod_2010)
 ```
+
+* As the quality metric come from training they aren't that meaningful
+    + The $R^2$ and $adjusted \thinspace R^2$ are borderline disappointing.
+    + The $F \thinspace statistic$ (statistic) is way bigger than 1 (a good sign). 
 
 ```{r}
 broom::tidy(mod_2010,
@@ -644,34 +664,6 @@ broom::tidy(mod_2010,
 
 ## Evaluating Models
 
-### Overperforming predictors
-
-```{r}
-broom::tidy(mod_2006, 
-     conf.int = TRUE, 
-     conf.level = 0.95,
-     sep=":") %>%
-  arrange(desc(p.value)) %>%
-  slice(1:3) %>%
-  ggplot(aes(reorder(term,p.value), p.value)) +
-  geom_point(size = 2) +
-  labs(x = "Predictor variable",
-       y = "Estimated value (95% of confidence)")
-```
-
-```{r}
-broom::tidy(mod_2010, 
-     conf.int = TRUE, 
-     conf.level = 0.95,
-     sep=":") %>%
-  arrange(desc(p.value)) %>%
-  slice(1:3) %>%
-  ggplot(aes(reorder(term,p.value), p.value)) +
-  geom_point(size = 2) +
-  labs(x = "Predictor variable",
-       y = "Estimated value (95% of confidence)")
-```
-
 ### Underperforming predictors
 
 ```{r}
@@ -679,29 +671,83 @@ broom::tidy(mod_2006,
      conf.int = TRUE, 
      conf.level = 0.95,
      sep=":") %>%
-  arrange(p.value) %>%
+  arrange(desc(p.value)) %>%
   slice(1:3) %>%
   ggplot(aes(reorder(term,p.value), p.value)) +
-  geom_hline(yintercept = 0.05, colour = "darkred") +
   geom_point(size = 2) +
   labs(x = "Predictor variable",
-       y = "Estimated value (95% of confidence)")
+       y = "Estimated p-value",
+       title="Underperforming predictors (2006 elections)")
 ```
+
+* Unexpectedly **total_receita** didn't perform so well in terms of $p-value$.
+* The predictors created out of the encoding of the nominal categorical variable **partido** didn't perform well.
 
 ```{r}
 broom::tidy(mod_2010, 
      conf.int = TRUE, 
      conf.level = 0.95,
      sep=":") %>%
+  arrange(desc(p.value)) %>%
+  slice(1:3) %>%
+  ggplot(aes(reorder(term,p.value), p.value)) +
+  geom_point(size = 2) +
+  labs(x = "Predictor variable",
+       y = "Estimated p-value",
+       title="Underperforming predictors (2010 elections)")
+```
+
+* The predictors created out of the encoding of the nominal categorical variable **partido** didn't perform well.
+* The predictors created out of the encoding of the nominal categorical variable **estado.civil** didn't perform well.
+* The predictor quantidade_fornecedores didn't perform well.
+
+<br>
+
+> On both models we can see that predictors related to **partido** perform poorly. Also we could see the sizable appearance of categorical variable among underperformer predictors.
+
+### Overperforming predictors
+
+* We shall keep out the _Intercept_ as it isn't as meaningful as other predictors.
+
+```{r}
+broom::tidy(mod_2006, 
+     conf.int = TRUE, 
+     conf.level = 0.95,
+     sep=":") %>%
+  filter(term != "(Intercept)") %>%
   arrange(p.value) %>%
   slice(1:3) %>%
   ggplot(aes(reorder(term,p.value), p.value)) +
   geom_hline(yintercept = 0.05, colour = "darkred") +
   geom_point(size = 2) +
   labs(x = "Predictor variable",
-       y = "Estimated value (95% of confidence)")
+       y = "Estimated p-value",
+       title="Overperforming predictors (2006 elections)")
 ```
 
+* We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as the best predictors.
+
+```{r}
+broom::tidy(mod_2010, 
+     conf.int = TRUE, 
+     conf.level = 0.95,
+     sep=":") %>%
+  filter(term != "(Intercept)") %>%
+  arrange(p.value) %>%
+  slice(1:3) %>%
+  ggplot(aes(reorder(term,p.value), p.value)) +
+  geom_hline(yintercept = 0.05, colour = "darkred") +
+  geom_point(size = 2) +
+  labs(x = "Predictor variable",
+       y = "Estimated p-value",
+       title="Overperforming predictors (20010 elections)")
+```
+
+* We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as the best predictors.
+
+<br>
+
+> On both models different combinations of the predictors **total_receita** and **total_despesa** were clearly the best predictors.
 
 ### Residue Analysis
 
@@ -722,6 +768,8 @@ mod_2006 %>%
        title="Residual vs Fitted Plot (2006 elections)")
 ```
 
+* There's indication, although not so strong, of a pattern in the _residual vs fitted_, this is a bad sign for the analyzed model. 
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(.fitted, .resid)) + 
@@ -734,6 +782,8 @@ mod_2010 %>%
        x="Fitted values",
        title="Residual vs Fitted Plot (2010 elections)")
 ```
+
+* Here we can see rather equally spread (could be better) residuals around a horizontal line without distinct patterns. A good sign for the model.
 
 #### Normal Q-Q
 
@@ -750,6 +800,8 @@ mod_2006 %>%
               linetype="dashed")  # dashed reference line
 ```
 
+* Our residuals somewhat deviate from (not normally distributed). As we have a _relatively_ mild deviation we have a negative yet mild sign for our model.
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(sample=rstandard(.))) +
@@ -762,6 +814,8 @@ mod_2010 %>%
               size = 0.8,
               linetype="dashed")  # dashed reference line
 ```
+
+* Although not perfect we can see that the residuals for this model are closer to normally distributed. 
 
 #### Scale-Location
 
@@ -777,6 +831,9 @@ mod_2006 %>%
        y = expression(sqrt("|Standardized residuals|")))
 ```
 
+* The residuals are not equally spread. Our model has violated the assumption of $homoscedasticity$ (equal variance)
+    + The degree of the violation isn't so extense from around the 25000th fitted value onward the residuals seem very equally spread.
+    
 ```{r}
 mod_2010 %>%
   ggplot(aes(.fitted, 
@@ -789,7 +846,15 @@ mod_2010 %>%
        y = expression(sqrt("|Standardized residuals|")))
 ```
 
+* Here we see a scenario similar to the one we just witnessed, but in the case of this model the residuals are closer to equally spread. This is the sign of a better fit.
+
+<br>
+
 #### Residual vs Leverage Plot
+
+<br>
+
+* We will use as thumb rule $D_i > 1$ as cutoff for highly influential points/outliers 
 
 ```{r}
 mod_2006 %>%
@@ -802,6 +867,8 @@ mod_2006 %>%
   theme(legend.position="bottom")
 ```
 
+* We can see no outliers that would drastically change the results of our model.
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(.hat, .stdresid)) + 
@@ -813,7 +880,13 @@ mod_2010 %>%
   theme(legend.position="bottom")
 ```
 
+* Once again we can see no outliers that would drastically change the results of our model.
+
 #### Cook's dist vs Leverage
+
+<br>
+
+* We will use as thumb rule $D_i > 1$ as cutoff for highly influential points/outliers 
 
 ```{r}
 mod_2006 %>%
@@ -825,6 +898,8 @@ mod_2006 %>%
   geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
 ```
 
+* We can see no outliers that would drastically change the results of our model.
+
 ```{r}
 mod_2010 %>%
   ggplot(aes(.hat, .cooksd)) + 
@@ -834,6 +909,8 @@ mod_2010 %>%
   ggtitle("Cook's dist vs Leverage hii/(1-hii) (2010 elections)") + 
   geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
 ```
+
+* Once again we can see no outliers that would drastically change the results of our model.
 
 ### Cross Validation
 
@@ -847,6 +924,15 @@ data.frame( R2 = caret::R2(predictions, validate_data_2006$votos),
               mean(validate_data_2006$votos))
 ```
 
+Now let’s talk about the results taken from the validate data for 2006 elections (more meaningful).
+
+* We got a decent 0.6 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 60% of the response variable variability.
+
+*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 29326.09.
+    + Our model would miss the mark by approximately 29326 (RMSE), that is if candidate had one million votes we would predict 29326 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13022.77.
+* The prediction error rate (ERR) was 1.263851.
+
 ```{r}
 predictions <- mod_2010 %>% predict(validate_data_2010)
 
@@ -856,6 +942,17 @@ data.frame( R2 = caret::R2(predictions, validate_data_2010$votos),
             ERR = caret::RMSE(predictions, validate_data_2010$votos)/
               mean(validate_data_2010$votos))
 ```
+
+Now let’s talk about the results taken from the validate data for 2010 elections (more meaningful).
+
+* We got a decent 0.54 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 54% of the response variable variability. (Smaller than the previous model)
+
+*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 30501.16
+    + Our model would miss the mark by approximately 30501 (RMSE), that is if candidate had one million votes we would predict 30501 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13789.98.
+* The prediction error rate (ERR) was 1.409471.
+
+> We have signs here that the model for 2006 elections fit the train set a little too much (better residual results but worse validation results).
 
 ```{r}
 predictions <- mod_2006 %>% predict(test_data_2006)
@@ -867,6 +964,15 @@ data.frame( R2 = caret::R2(predictions, test_data_2006$votos),
               mean(test_data_2006$votos))
 ```
 
+Now let’s talk about the results taken from the test data for 2006 elections (most meaningful).
+
+* We got a decent 0.5 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 50% of the response variable variability. (Smaller than the previous model)
+
+*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 31605.85
+    + Our model would miss the mark by approximately 31606 (RMSE), that is if candidate had one million votes we would predict 31606 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13832.72.
+* The prediction error rate (ERR) was 1.350674.
+
 ```{r}
 predictions <- mod_2010 %>% predict(test_data_2010)
 
@@ -876,6 +982,17 @@ data.frame( R2 = caret::R2(predictions, test_data_2010$votos),
             ERR = caret::RMSE(predictions, test_data_2010$votos)/
               mean(test_data_2010$votos))
 ```
+
+Now let’s talk about the results taken from the test data for 2006 elections (most meaningful).
+
+* We got a decent 0.53 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 53% of the response variable variability. (Smaller than the previous model)
+
+*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 29033.86
+    + Our model would miss the mark by approximately 29034 (RMSE), that is if candidate had one million votes we would predict 29034 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 12804.09.
+* The prediction error rate (ERR) was 1.461269.
+
+> At the end the model proved a better fit (a little better) for the 2010 elections  than for the 2006 elections.
 
 # Removing redundant predictors
 
@@ -1056,6 +1173,14 @@ data.frame( R2 = caret::R2(predictions, validate_data_2010$votos),
               mean(validate_data_2010$votos))
 ```
 
+Now let’s talk about the results taken from the test data (more meaningful).
+
+* We got a decent 0.62 R² and adjusted R² approximately. This means that this model explain approximately 62% of the response variable variability.
+* The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 27648.34.
+    + Our model would miss the mark by approximately 27648 (RMSE), that is if candidate had one million votes we would predict 27648 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13045.81.
+* The prediction error rate (ERR) was 1.277641.
+
 ```{r}
 predictions <- mod_2010 %>% predict(test_data_2010)
 
@@ -1066,9 +1191,30 @@ data.frame( R2 = caret::R2(predictions, test_data_2010$votos),
               mean(test_data_2010$votos))
 ```
 
+Now let’s talk about the results taken from the test data (most meaningful).
+
+* We got a decent 0.57 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 57% of the response variable variability.
+
+* The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 27420.97.
+    + Our model would miss the mark by approximately 27421 (RMSE), that is if candidate had one million votes we would predict 27421 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 12391.32.
+* The prediction error rate (ERR) was 1.380093.
+
+<br>
+
+***
+
+<br>
+
 # Model for both elections
 
+<br>
+
 ## Split data for cross validation
+
+<br>
+
+* Let's use the $50/25/25$ proportions for the train,validate and test datasets
 
 ```{r results='asis'}
 set.seed(11) # We set the set for reason of reproducibility
