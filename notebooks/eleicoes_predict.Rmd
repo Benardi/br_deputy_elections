@@ -170,8 +170,8 @@ eleicoes_data %>%
 grid.arrange(p1, p2, ncol=1)
 ```
 
-* In 2010 the party $PMDB$ takes the first place from the party $PT$
-* The party $PSDB$ maintains its position at the third place.
+* In 2010 the poltical party $PMDB$ takes the first place from the poltical party $PT$
+* The poltical party $PSDB$ maintains its position at the third place.
 
 ```{r}
 eleicoes_data %>%
@@ -251,7 +251,7 @@ eleicoes_data %>%
 
 2010 overall tops 2006 in the number of candidates of each and every marital status with **one exception**: 
 
-* We see a decrease of candidates _SEPARADO(A) JUDICIALMENTE_ from 2006 to 2010.
+* We see a decrease of candidates whose marital status is _SEPARADO(A) JUDICIALMENTE_ from 2006 to 2010.
 
 ```{r}
 eleicoes_data %>%
@@ -268,9 +268,9 @@ eleicoes_data %>%
   coord_flip()
 ```
 
-2010 overall tops 2006 in the number of candidates of each and every education level  with **one exceptions**: 
+2010 overall tops 2006 in the number of candidates of each and every education level  with **one exception**: 
 
-* The number of candidates with _ENSINO FUNDAMENTAL INCOMPLETO_ decreased.
+* The number of candidates with level of education _ENSINO FUNDAMENTAL INCOMPLETO_ decreased.
 
 ```{r}
 eleicoes_data %>%
@@ -289,9 +289,10 @@ eleicoes_data %>%
 
 ## Evaluating _skew_ on predictors
 
+<br>
 
-* Let's take a look at the quantitative predictors of interest.
-    + **sequencial candidato** has no meaning attached to it so we'll skip it.
+##### Let's take a look at the quantitative predictors of interest.
+* **sequencial candidato** has no meaning attached to it so we'll skip it.
 
 ```{r}
 eleicoes_data %>%
@@ -494,8 +495,8 @@ eleicoes_data %>%
   ggtitle("Correlation plot for 2006 elections")
 ```
 
-* **sequencial_candidato** and **id** do not look meaning (as expected).
-* **total_receita** and **total_despesa** seem very meaningful (especially **total_despesa**).
+* **sequencial_candidato** doesn't not look meaningful (as expected).
+* **total_receita**, **total_despesa** and **recursos_de_pessoas_juridicas** seem very meaningful.
 
 
 ```{r}
@@ -528,8 +529,8 @@ eleicoes_data %>%
   ggtitle("Correlation plot for 2010 elections")
 ```
 
-* **sequencial_candidato** and **id** do not look meaning (as expected).
-* **total_receita** and **total_despesa** seem very meaningful.
+* **sequencial_candidato** doesn't look meaningful (as expected).
+* **total_receita**, **total_despesa** and **recursos_de_pessoas_juridicas** seem meaningful.
 
 ```{r}
 eleicoes_data %>% 
@@ -561,17 +562,23 @@ eleicoes_data %>%
 ```
 
 * **sequencial_candidato** and **id** do not look meaning (as expected).
-* **total_receita** and **total_despesa** seem very meaningful (especially **total_despesa**).
+* **total_receita**, **total_despesa** and **recursos_de_pessoas_juridicas** seem very meaningful.
+
+<br>
+
+***
 
 <br>
 
 # Should we use all variables?
 
+<br>
+
 #### A multivariate linear regression model made with all variables wouldn't be feasible
 
-* **cargo** is categorical and renders a one level factor. For this reason we must refrain from using it in our regression.
-* **sequencial_candidato** and **id** aren't meaningful at all as the correlogram clearly showed us.
-* We have nominal categorical variables such as **uf** that have tenths of levels. A variable like this one demands a _one hot encoding_ which would increase exponentialy the number of variables fed to the model and most likely lead to a overfitting.
+* **cargo** is categorical and renders a one level factor. For this reason we simply can't use it in our regression.
+* **sequencial_candidato** isn't meaningful at all as the correlogram clearly showed us.
+* We have nominal categorical variables such as **uf** that have dozens of levels. A variable like this one demands a _one hot encoding_ which would increase exponentialy the number of variables fed to the model and most likely lead to an overfitting.
 
 > For the aforementioned reasons a multivariate linear regression model made with all variables isn't plausible.
 
@@ -591,7 +598,7 @@ eleicoes_data %>%
 
 <br>
 
-* Let's use the $50/25/25$ proportions for the train,validate and test datasets
+* Let's use the $50/25/25$ proportions for the train, validate and test datasets.
 
 ```{r}
 scaled_data %>%  
@@ -670,14 +677,14 @@ cat("#### Validate Data ",
 ```{r}
 mod_2006 <- lm(votos ~ log.quantidade_fornecedores * partido.PSDB + sqrt.media_despesa * partido.PMDB +
                   sqrt.total_receita * sqrt.total_despesa + uf.SP * estado.civil.CASADO.A. + 
-                  uf.RJ * total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`, 
+                  uf.RJ * sqrt.total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`, 
           data = train_data_2006)
 
 broom::glance(mod_2006)
 ```
 
-* As the quality metric come from training they aren't that meaningful
-    + A decent $R^2$ and $adjusted \thinspace R^2$.
+* As these quality metrics come from training they aren't that meaningful:
+    + A decent $R^2$ and $adjusted \thinspace R^2$ around $0.5$.
     + The $F \thinspace statistic$ (statistic) is way bigger than 1 (a good sign). 
 
 ```{r}
@@ -696,7 +703,7 @@ broom::tidy(mod_2006,
 
 <br>
 
-* Let's use the $50/25/25$ proportions for the train,validate and test datasets
+* Let's use the $50/25/25$ proportions for the train, validate and test datasets
 
 ```{r}
 scaled_data %>%
@@ -708,9 +715,6 @@ scaled_data_2010 %>%
 
 ```{r results='asis'}
 set.seed(11) # We set the set for reason of reproducibility
-
-## Adding surrogate key to dataframe
-scaled_data_2010$id <- 1:nrow(scaled_data_2010)
 
 scaled_data_2010 %>% 
   dplyr::sample_frac(.5) -> train_data_2010
@@ -778,14 +782,14 @@ cat("#### Validate Data ",
 ```{r}
 mod_2010 <- lm(votos ~ log.quantidade_fornecedores * partido.PSDB + sqrt.media_despesa * partido.PMDB +
                   sqrt.total_receita * sqrt.total_despesa + uf.SP * estado.civil.CASADO.A. + 
-                  uf.RJ * total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`,
+                  uf.RJ * sqrt.total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`,
           data = train_data_2010)
 
 broom::glance(mod_2010)
 ```
 
 * As the quality metric come from training they aren't that meaningful
-    + The $R^2$ and $adjusted \thinspace R^2$ are borderline disappointing.
+    + The $R^2$ and $adjusted \thinspace R^2$ around $0.45$ are borderline disappointing.
     + The $F \thinspace statistic$ (statistic) is way bigger than 1 (a good sign). 
 
 ```{r}
@@ -796,7 +800,11 @@ broom::tidy(mod_2010,
 
 <br>
 
-# Evaluating Regular Models
+# Evaluating Models
+
+<br>
+
+##### We shall keep out the _Intercept_ from our p.value and coefficient analysis as its analysis isn't as meaningful as that of other predictors.
 
 <br>
 
@@ -816,8 +824,9 @@ broom::tidy(mod_2006,
        title="Predictors of of biggest p.value (2006 elections)")
 ```
 
-* Unexpectedly **total_receita** didn't perform so well in terms of $p-value$.
-* The predictors created out of the encoding of the nominal categorical variable **partido** didn't perform well.
+* The predictors created out of the encoding of the nominal categorical variables **uf** and **partido** didn't perform well.
+* Unexpectedly **total_receita** didn't perform so well in terms of $p-value$, probably due to the interaction with the underperforming variable **uf**.
+
 
 ```{r}
 broom::tidy(mod_2010, 
@@ -830,12 +839,11 @@ broom::tidy(mod_2010,
   geom_point(size = 2) +
   labs(x = "Predictor variable",
        y = "Estimated p-value",
-       title="Predictors of lowest p.value (2010 elections)")
+       title="Predictors of biggest p.value (2010 elections)")
 ```
 
-* The predictors created out of the encoding of the nominal categorical variable **partido** didn't perform well.
-* The predictors created out of the encoding of the nominal categorical variable **estado.civil** didn't perform well.
-* The predictor quantidade_fornecedores didn't perform well.
+* The predictors created out of the encoding of the nominal categorical variables **partido** and **uf** didn't perform well.
+* The predictor **media_despesa** didn't perform so well in terms of $p-value$, probably due to the interaction with the underperforming variable **partido**.
 
 <br>
 
@@ -843,7 +851,7 @@ broom::tidy(mod_2010,
 
 <br>
 
-* We shall keep out the _Intercept_ as it isn't as meaningful as other predictors.
+##### P Value isn't as effective in pointing out who are the most meaningful predictors as it's in pointing which are the least meaningful. 
 
 ```{r}
 broom::tidy(mod_2006, 
@@ -861,7 +869,8 @@ broom::tidy(mod_2006,
        title="Predictors of smallest p.value (2006 elections)")
 ```
 
-* We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as the best predictors.
+* We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as predictors with good pvalues. This corroborates what the _correlogram_ suggested.
+* We also have **quantidade_fornecedores** with positive results.
 
 ```{r}
 broom::tidy(mod_2010, 
@@ -876,10 +885,11 @@ broom::tidy(mod_2010,
   geom_point(size = 2) +
   labs(x = "Predictor variable",
        y = "Estimated p-value",
-       title="Predictors of smallest p.value (20010 elections)")
+       title="Predictors of smallest p.value (2010 elections)")
 ```
 
-* We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as the best predictors.
+* We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as predictors with good pvalues. This corroborates what the _correlogram_ suggested.
+* We also have **quantidade_fornecedores** and **media_despesa** with positive results.
 
 <br>
 
@@ -899,6 +909,11 @@ broom::tidy(mod_2006,
   coord_flip()
 ```
 
+* Results regarding coefficients corroborate what we saw in the predictors' $p.value$.
+    + **uf** and **partido** don't seem meaningful (smallest coefficients).
+    + **total_receita**, **quantidade_fornecedores** and specially **total_despesa** seem particularly meaningful (biggest coefficients).
+
+
 ```{r}
 broom::tidy(mod_2010, 
      conf.int = TRUE, 
@@ -910,6 +925,10 @@ broom::tidy(mod_2010,
   geom_bar(stat = "identity") + 
   coord_flip()
 ```
+
+* Results regarding coefficients seem to corroborate what we saw in the predictors' $p.value$.
+    + **uf** **estado.civil** and **partido** don't seem meaningful (smallest coefficients).
+    + **total_receita**, **quantidade_fornecedores** and specially **total_despesa** seem particularly meaningful (biggest coefficients).
 
 ```{r}
 broom::tidy(mod_2006, 
@@ -927,6 +946,8 @@ broom::tidy(mod_2006,
   coord_flip()
 ```
 
+* The only predictors that seem statiscally significant at a level of confidence of $95\%$ are **total_despesa**, **quantidade_fornecedores** and the interaction between **total_despesa** and **total_receita**
+
 ```{r}
 broom::tidy(mod_2010, 
      conf.int = TRUE, 
@@ -943,12 +964,13 @@ broom::tidy(mod_2010,
   coord_flip()
 ```
 
+* In the model for the 2010 elections at a level of confidence of $95\%$ we have evidence of more statiscally significant predictors, among which we still have **total_despesa**, **quantidade_fornecedores** and now also **total_receita** (among others).
 
-### Residue Analysis
+## Residue Analysis
 
 <br>
 
-#### Residual vs Fitted
+### Residual vs Fitted
 
 ```{r}
 mod_2006 %>%
@@ -963,7 +985,7 @@ mod_2006 %>%
        title="Residual vs Fitted Plot (2006 elections)")
 ```
 
-* There's indication, although not so strong, of a pattern in the _residual vs fitted_, this is a bad sign for the analyzed model. 
+* There's indication, although not strong, of a pattern in the _residual vs fitted_, this is a bad sign for the analyzed model. 
 
 ```{r}
 mod_2010 %>%
@@ -978,9 +1000,9 @@ mod_2010 %>%
        title="Residual vs Fitted Plot (2010 elections)")
 ```
 
-* Here we can see rather equally spread (could be better) residuals around a horizontal line without distinct patterns. A good sign for the model.
+* Here we can see rather equally spread residuals around a horizontal line (could be better) without distinct patterns. A good sign for the model.
 
-#### Normal Q-Q
+### Normal Q-Q
 
 ```{r}
 mod_2006 %>%
@@ -995,7 +1017,7 @@ mod_2006 %>%
               linetype="dashed")  # dashed reference line
 ```
 
-* Our residuals somewhat deviate from (not normally distributed). As we have a _relatively_ mild deviation we have a negative yet mild sign for our model.
+* Our residuals somewhat deviate from a normal distribution. As we have a _relatively_ mild deviation we have a negative yet mild symptom.
 
 ```{r}
 mod_2010 %>%
@@ -1012,7 +1034,7 @@ mod_2010 %>%
 
 * Although not perfect we can see that the residuals for this model are closer to normally distributed. 
 
-#### Scale-Location
+### Scale-Location
 
 ```{r}
 mod_2006 %>%
@@ -1026,8 +1048,8 @@ mod_2006 %>%
        y = expression(sqrt("|Standardized residuals|")))
 ```
 
-* The residuals are not equally spread. Our model has violated the assumption of $homoscedasticity$ (equal variance)
-    + The degree of the violation isn't so extense from around the 25000th fitted value onward the residuals seem very equally spread.
+* The residuals are not equally spread. Our model has violated the assumption of $homoscedasticity$ (equal variance) which is a bad sign.
+    + The degree of the violation isn't so extense, as from around the 50000th fitted value onward the residuals seem very equally spread.
     
 ```{r}
 mod_2010 %>%
@@ -1041,15 +1063,15 @@ mod_2010 %>%
        y = expression(sqrt("|Standardized residuals|")))
 ```
 
-* Here we see a scenario similar to the one we just witnessed, but in the case of this model the residuals are closer to equally spread. This is the sign of a better fit.
+* Here we see a scenario similar to the one we just witnessed on the previous model.
 
 <br>
 
-#### Residual vs Leverage Plot
+### Residual vs Leverage Plot
 
 <br>
 
-* We will use as thumb rule $D_i > 1$ as cutoff for highly influential points/outliers 
+##### Resorting to thumb rules regarding  **Cook's Distance** we'll use $D_i > 1$ as a cutoff for highly influential points/outliers 
 
 ```{r}
 mod_2006 %>%
@@ -1077,7 +1099,7 @@ mod_2010 %>%
 
 * Once again we can see no outliers that would drastically change the results of our model.
 
-#### Cook's dist vs Leverage
+### Cook's dist vs Leverage
 
 <br>
 
@@ -1105,9 +1127,20 @@ mod_2010 %>%
   geom_abline(slope=seq(0,3,0.5), color="gray", linetype="dashed")
 ```
 
-* Once again we can see no outliers that would drastically change the results of our model.
+* Here we have evidence of a outlier that would drastically change the results of our model: $D_i = 1.2$ 
+## Cross Validation
 
-### Cross Validation
+<br>
+
+## Cross Validation
+
+<br>
+
+### Model for 2006 elections 
+
+<br>
+
+#### Validate
 
 ```{r}
 predictions <- mod_2006 %>% predict(validate_data_2006)
@@ -1121,12 +1154,16 @@ data.frame( R2 = caret::R2(predictions, validate_data_2006$votos),
 
 Now let’s talk about the results taken from the validate data for 2006 elections (more meaningful).
 
-* We got a decent 0.6 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 60% of the response variable variability.
+* We got a decent 0.56 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 56% of the response variable variability.
 
-*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 29326.09.
-    + Our model would miss the mark by approximately 29326 (RMSE), that is if candidate had one million votes we would predict 29326 more than we should (or less than we should).
-* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13022.77.
-* The prediction error rate (ERR) was 1.263851.
+* The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 30669.
+    + Our model would miss the mark by approximately 30669 (RMSE), that is if candidate had one million votes we would predict 30669 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13639.2	.
+* The prediction error rate (ERR) was 1.321718.
+
+<br>
+
+#### Test
 
 ```{r}
 predictions <- mod_2010 %>% predict(validate_data_2010)
@@ -1140,14 +1177,20 @@ data.frame( R2 = caret::R2(predictions, validate_data_2010$votos),
 
 Now let’s talk about the results taken from the validate data for 2010 elections (more meaningful).
 
-* We got a decent 0.54 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 54% of the response variable variability. (Smaller than the previous model)
+* We got a decent 0.62 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 62% of the response variable variability. (Smaller than the previous model)
 
-*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 30501.16
-    + Our model would miss the mark by approximately 30501 (RMSE), that is if candidate had one million votes we would predict 30501 more than we should (or less than we should).
-* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13789.98.
-* The prediction error rate (ERR) was 1.409471.
+*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 27600
+    + Our model would miss the mark by approximately 27600 (RMSE), that is if candidate had one million votes we would predict 27600 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13981.
+* The prediction error rate (ERR) was 1.275393.
 
-> We have signs here that the model for 2006 elections fit the train set a little too much (better residual results but worse validation results).
+> We have signs here of a decent although not brilliant fit of the model for 2006 elections. There's no clear evidence of overfitting as test, validate and train rendered consonant results.
+
+### Model for 2010 elections
+
+<br>
+
+#### Validate
 
 ```{r}
 predictions <- mod_2006 %>% predict(test_data_2006)
@@ -1161,12 +1204,16 @@ data.frame( R2 = caret::R2(predictions, test_data_2006$votos),
 
 Now let’s talk about the results taken from the test data for 2006 elections (most meaningful).
 
-* We got a decent 0.5 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 50% of the response variable variability. (Smaller than the previous model)
+* We got a decent 0.58 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 58% of the response variable variability. (Smaller than the previous model)
 
-*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 31605.85
-    + Our model would miss the mark by approximately 31606 (RMSE), that is if candidate had one million votes we would predict 31606 more than we should (or less than we should).
-* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13832.72.
-* The prediction error rate (ERR) was 1.350674.
+*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 28937
+    + Our model would miss the mark by approximately 28937 (RMSE), that is if candidate had one million votes we would predict 28937 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 13645.
+* The prediction error rate (ERR) was 1.236634.
+
+<br>
+
+#### Test
 
 ```{r}
 predictions <- mod_2010 %>% predict(test_data_2010)
@@ -1180,14 +1227,20 @@ data.frame( R2 = caret::R2(predictions, test_data_2010$votos),
 
 Now let’s talk about the results taken from the test data for 2006 elections (most meaningful).
 
-* We got a decent 0.53 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 53% of the response variable variability. (Smaller than the previous model)
+* We got a decent 0.59 R² and adjusted R² approximately (notice the decrease). This means that this model explain approximately 59% of the response variable variability. (Smaller than the previous model)
 
-*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 29033.86
-    + Our model would miss the mark by approximately 29034 (RMSE), that is if candidate had one million votes we would predict 29034 more than we should (or less than we should).
-* The average absolute difference between observed and predicted outcomes (MAE) was approximately 12804.09.
-* The prediction error rate (ERR) was 1.461269.
+*The average difference between the observed known outcome values and the values predicted by the model (RMSE) was of approximately 26773
+    + Our model would miss the mark by approximately 26773 (RMSE), that is if candidate had one million votes we would predict 26773 more than we should (or less than we should).
+* The average absolute difference between observed and predicted outcomes (MAE) was approximately 12847.
+* The prediction error rate (ERR) was 1.347477.
 
-> At the end the model proved a better fit (a little better) for the 2010 elections  than for the 2006 elections.
+>  The model for the 2010 elections also showed of a decent although not brilliant fit. There's no clear evidence of overfitting as test, validate and train rendered consonant results.
+
+<br>
+
+***
+
+<br>
 
 # Removing redundant predictors
 
@@ -1467,9 +1520,6 @@ Now let’s talk about the results taken from the test data (most meaningful).
 
 ```{r results='asis'}
 set.seed(11) # We set the set for reason of reproducibility
-
-## Adding surrogate key to dataframe
-scaled_data$id <- 1:nrow(scaled_data)
 
 scaled_data %>% 
   dplyr::sample_frac(.5) -> train_data
