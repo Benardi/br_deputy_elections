@@ -19,7 +19,7 @@ output:
 
 <br>
 
-> Data Analysis with multivariate Linear Regression  on data about voting for the 2006 and 2010 elections in Brazil for the "Câmara Federal de Deputados". Data was taken from the [TSE portal](http://www.tse.jus.br/)
+> Data Analysis with multivariate Linear Regression  on data about polls for the 2006 and 2010 elections in Brazil for the "Câmara Federal de Deputados". Data was taken from the [TSE portal](http://www.tse.jus.br/) and encompasses approximately 7300 candidates.
 
 <br>
 
@@ -94,6 +94,51 @@ eleicoes_data %>%
   glimpse()
 
 ```
+
+<br>
+
+## The variables 
+
+<br>
+
+```
+The response variable is the variable that you are interesting in making measurements and conclusions on.
+
+A predictor variable is a variable used to predict another variable.
+
+Our response variable will be "votos", we want to study how well the predictor variables can help predict its behavior and how they impact in the linear regression.
+```
+
+<br>
+
+#### Each item corresponds to a candidate, the attributes of each item are as follows:
+
+- **ano** : Year at which the election took place.
+- **sequencial_candidato** : Sequential ID to map the candidates
+- **nome** : Name of the candidate
+- **uf** : Federate state to which the candidate belongs.
+- **partido** : Political party to which the candidate belongs.
+- **quantidade_doacoes** : Number of donations received during political campaign.
+- **quantidade_doadores** : Number of donators that contributed to the candidate's political campaign.
+- **total_receita** : Total revenue. 
+- **media_receita** : Mean revenue. 
+- **recursos_de_outros_candidatos.comites** : Revenue coming from other candidate's committees.
+- **recursos_de_pessoas_fisicas** : Revenue coming from individuals.
+- **recursos_de_pessoas_juridicas** : Revenue coming from legal entities.
+- **recursos_proprios** : Revenue coming from personal resources.
+- **recursos_de_partido_politico** : Revenue coming from political party.
+- **quantidade_despesas** : Number of expenses.
+- **quantidade_fornecedores** : Number of suppliers.
+- **total_despesa** : Total expenditure. 
+- **media_despesa** : Mea expenditure.
+- **cargo** : Position.
+- **sexo** : Sex.
+- **grau** : Level of education.
+- **estado_civil** : Marital status. 
+- **ocupacao** : Candidate's occupation up to the election.
+- **votos** : Number of votes received.
+
+<br>
 
 ## Data Exploration
 
@@ -411,11 +456,11 @@ eleicoes_data %>%
 <br>
 
 
-#### Correlogram
+## Discern promising predictors
 
 <br>
 
-We'll use the correlogram to have an idea on how the predictors interact with each and with the target variable. How the predictors react with the target **votos** is of particular interest.
+##### We'll use the correlogram to have an idea on how the predictors interact with each and with the target variable. How the predictors react with the target **votos** is of particular interest.
 
 * Predictors whom have been transformed will be replaced by their enhanced versions.
 
@@ -520,7 +565,7 @@ eleicoes_data %>%
 
 <br>
 
-## Should we use all variables?
+# Should we use all variables?
 
 #### A multivariate linear regression model made with all variables wouldn't be feasible
 
@@ -625,7 +670,7 @@ cat("#### Validate Data ",
 ```{r}
 mod_2006 <- lm(votos ~ log.quantidade_fornecedores * partido.PSDB + sqrt.media_despesa * partido.PMDB +
                   sqrt.total_receita * sqrt.total_despesa + uf.SP * estado.civil.CASADO.A. + 
-                  uf.RJ * total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`,
+                  uf.RJ * total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`, 
           data = train_data_2006)
 
 broom::glance(mod_2006)
