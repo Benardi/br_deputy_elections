@@ -168,14 +168,24 @@ eleicoes_data %>%
 ```
 
 * There are four predictors on which we may apply the logarithmic transformation 
+* We'll resort to square root transformation for the rest.
 
 ```{r}
 # apply logarithmic transformation
 eleicoes_data %>%
-  mutate(log.quantidade_doacoes = log(quantidade_doacoes),
-         log.quantidade_doadores = log(quantidade_doadores),
-         log.quantidade_despesas = log(quantidade_despesas),
-         log.quantidade_fornecedores = log(quantidade_fornecedores)) -> eleicoes_data
+  mutate(log.quantidade_doacoes = log10(quantidade_doacoes),
+         log.quantidade_doadores = log10(quantidade_doadores),
+         log.quantidade_despesas = log10(quantidade_despesas),
+         log.quantidade_fornecedores = log10(quantidade_fornecedores),
+         sqrt.total_receita = sqrt(total_receita),
+         sqrt.media_receita = sqrt(media_receita),
+         sqrt.total_despesa = sqrt(total_despesa),
+         sqrt.media_despesa = sqrt(media_despesa),
+         sqrt.recursos_proprios = sqrt(recursos_proprios),
+         sqrt.recursos_de_pessoas_juridicas = sqrt(recursos_de_pessoas_juridicas),
+         sqrt.recursos_de_partido_politico = sqrt(recursos_de_partido_politico),
+         sqrt.recursos_de_outros_candidatos.comites = sqrt(recursos_de_outros_candidatos.comites),
+         sqrt.recursos_de_pessoas_fisicas = sqrt(recursos_de_pessoas_fisicas)) -> eleicoes_data
 
 
 # put all quantitative predictors (of interest) in same scale
@@ -184,6 +194,15 @@ eleicoes_data %>%
                          quantidade_doadores,
                          total_receita,
                          media_receita,
+                         sqrt.total_receita,
+                         sqrt.media_receita,
+                         sqrt.recursos_de_outros_candidatos.comites,
+                         sqrt.recursos_de_pessoas_fisicas,
+                         sqrt.recursos_de_pessoas_juridicas,
+                         sqrt.recursos_proprios,
+                         sqrt.recursos_de_partido_politico,
+                         sqrt.total_despesa,
+                         sqrt.media_despesa,
                          log.quantidade_doacoes,
                          log.quantidade_doadores,
                          log.quantidade_despesas,
@@ -200,6 +219,22 @@ eleicoes_data %>%
                          media_despesa),
              .funs = funs(as.numeric(scale(.)))) -> scaled_data
 ```
+
+```{r}
+eleicoes_data %>%
+  select(id,
+         log.quantidade_doacoes,
+         log.quantidade_doadores,
+         log.quantidade_despesas,
+         log.quantidade_fornecedores) %>%
+  melt(id=c("id"))  %>%
+  ggplot(aes(x = value)) + 
+  geom_histogram(bins = 30) + 
+  facet_wrap(. ~ variable,
+             scales = "free_x") 
+```
+
+* We have evidence that the positive skew has been dealt atenuated by the employed transformations.
 
 <br>
 
@@ -535,9 +570,9 @@ cat("#### Validate Data ",
 ### Train the model
 
 ```{r}
-mod_2006 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * partido.PMDB +
-                  total_receita * total_despesa + uf.SP * estado.civil.CASADO.A. + 
-                  uf.RJ * total_despesa + total_receita * `grau.SUPERIOR COMPLETO`,
+mod_2006 <- lm(votos ~ log.quantidade_fornecedores * partido.PSDB + sqrt.media_despesa * partido.PMDB +
+                  sqrt.total_receita * sqrt.total_despesa + uf.SP * estado.civil.CASADO.A. + 
+                  uf.RJ * total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`,
           data = train_data_2006)
 
 broom::glance(mod_2006)
@@ -643,9 +678,9 @@ cat("#### Validate Data ",
 ## Train the model
 
 ```{r}
-mod_2010 <- lm(votos ~ quantidade_fornecedores * partido.PSDB + media_despesa * partido.PMDB +
-                  total_receita * total_despesa + uf.SP * estado.civil.CASADO.A. + 
-                  uf.RJ * total_despesa + total_receita * `grau.SUPERIOR COMPLETO`,
+mod_2010 <- lm(votos ~ log.quantidade_fornecedores * partido.PSDB + sqrt.media_despesa * partido.PMDB +
+                  sqrt.total_receita * sqrt.total_despesa + uf.SP * estado.civil.CASADO.A. + 
+                  uf.RJ * total_despesa + sqrt.total_receita * `grau.SUPERIOR COMPLETO`,
           data = train_data_2010)
 
 broom::glance(mod_2010)
@@ -1059,7 +1094,8 @@ Now let’s talk about the results taken from the test data for 2006 elections (
 ## 2006 elections skimmed model
 
 ```{r}
-mod_2006 <- lm(votos ~ total_receita * total_despesa + media_despesa * partido.PMDB,
+mod_2006 <- lm(votos ~ sqrt.total_receita * sqrt.total_despesa + 
+                 sqrt.media_despesa * partido.PMDB,
           data = train_data_2006)
 
 broom::glance(mod_2006)
@@ -1186,7 +1222,7 @@ Now let’s talk about the results taken from the validate data (more meaningful
 ## 2010 elections skimmed model
 
 ```{r}
-mod_2010 <- lm(votos ~ total_receita * total_despesa,
+mod_2010 <- lm(votos ~ sqrt.total_receita * sqrt.total_despesa,
           data = train_data_2010)
 
 broom::glance(mod_2010)
@@ -1394,7 +1430,7 @@ cat("#### Validate Data ",
 
 
 ```{r}
-mod <- lm(votos ~ total_receita * total_despesa,
+mod <- lm(votos ~ sqrt.total_receita * sqrt.total_despesa,
           data = train_data)
 
 broom::glance(mod)
