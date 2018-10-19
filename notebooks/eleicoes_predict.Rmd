@@ -753,7 +753,9 @@ broom::tidy(mod_2010,
 
 # Evaluating Regular Models
 
-### Underperforming predictors
+<br>
+
+## P Value
 
 ```{r}
 broom::tidy(mod_2006, 
@@ -766,7 +768,7 @@ broom::tidy(mod_2006,
   geom_point(size = 2) +
   labs(x = "Predictor variable",
        y = "Estimated p-value",
-       title="Underperforming predictors (2006 elections)")
+       title="Predictors of of biggest p.value (2006 elections)")
 ```
 
 * Unexpectedly **total_receita** didn't perform so well in terms of $p-value$.
@@ -783,7 +785,7 @@ broom::tidy(mod_2010,
   geom_point(size = 2) +
   labs(x = "Predictor variable",
        y = "Estimated p-value",
-       title="Underperforming predictors (2010 elections)")
+       title="Predictors of lowest p.value (2010 elections)")
 ```
 
 * The predictors created out of the encoding of the nominal categorical variable **partido** didn't perform well.
@@ -794,7 +796,7 @@ broom::tidy(mod_2010,
 
 > On both models we can see that predictors related to **partido** perform poorly. Also we could see the sizable appearance of categorical variable among underperformer predictors.
 
-### Overperforming predictors
+<br>
 
 * We shall keep out the _Intercept_ as it isn't as meaningful as other predictors.
 
@@ -811,7 +813,7 @@ broom::tidy(mod_2006,
   geom_point(size = 2) +
   labs(x = "Predictor variable",
        y = "Estimated p-value",
-       title="Overperforming predictors (2006 elections)")
+       title="Predictors of smallest p.value (2006 elections)")
 ```
 
 * We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as the best predictors.
@@ -829,7 +831,7 @@ broom::tidy(mod_2010,
   geom_point(size = 2) +
   labs(x = "Predictor variable",
        y = "Estimated p-value",
-       title="Overperforming predictors (20010 elections)")
+       title="Predictors of smallest p.value (20010 elections)")
 ```
 
 * We can see the presence of different combinations of the predictors **total_receita** and **total_despesa** as the best predictors.
@@ -838,8 +840,22 @@ broom::tidy(mod_2010,
 
 > On both models different combinations of the predictors **total_receita** and **total_despesa** were clearly the best predictors (those that could explain the votes the most).
 
+## Coefficients
+
 ```{r}
 broom::tidy(mod_2006, 
+     conf.int = TRUE, 
+     conf.level = 0.95,
+     sep=":") %>%
+  filter(term != "(Intercept)") %>%
+  ggplot(aes(reorder(term, estimate),
+             estimate )) +
+  geom_bar(stat = "identity") + 
+  coord_flip()
+```
+
+```{r}
+broom::tidy(mod_2010, 
      conf.int = TRUE, 
      conf.level = 0.95,
      sep=":") %>%
@@ -863,18 +879,6 @@ broom::tidy(mod_2006,
   geom_hline(yintercept = 0, colour = "darkred") +
   labs(x = "Predictor variable",
        y = "Estimated coefficient (95% of confidence)") +
-  coord_flip()
-```
-
-```{r}
-broom::tidy(mod_2010, 
-     conf.int = TRUE, 
-     conf.level = 0.95,
-     sep=":") %>%
-  filter(term != "(Intercept)") %>%
-  ggplot(aes(reorder(term, estimate),
-             estimate )) +
-  geom_bar(stat = "identity") + 
   coord_flip()
 ```
 
