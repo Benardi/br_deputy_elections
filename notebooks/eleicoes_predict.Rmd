@@ -4,11 +4,11 @@ subtitle: "Multivariate Linear Regression on data about Brazilian elections"
 author: "José Benardi de Souza Nunes"
 date: 10/10/2018
 output:
-  html_notebook:
-    toc: yes
-    toc_float: yes
   html_document:
     df_print: paged
+    toc: yes
+    toc_float: yes
+  html_notebook:
     toc: yes
     toc_float: yes
 ---
@@ -226,7 +226,7 @@ eleicoes_data %>%
 eleicoes_data %>%
   ggplot(aes(recursos_proprios)) +
   geom_histogram(bins = 30) +
-  labs(x="Total Revenue",
+  labs(x="Own resources",
        y="Absolute Frequency") +
   facet_grid(. ~ ano)
 ``` 
@@ -278,7 +278,7 @@ eleicoes_data %>%
   summarize(n = n()) %>%
   ggplot(aes(reorder(sexo,n), n)) +
   geom_bar(stat = "identity") + 
-  labs(x="Gender", 
+  labs(x="Sex", 
        y="Absolute Frequency") +
   facet_grid(. ~ano)
 ```
@@ -328,7 +328,8 @@ eleicoes_data %>%
   ggplot(aes(x = value)) + 
   geom_histogram(bins = 30) + 
   facet_wrap(. ~ variable,
-             scales = "free_x") 
+             scales = "free_x") +
+  labs(x="Predictor",y="Absolute Frequency")
 ```
 
 * The overall _positive skew_ extends to these variables as well even if different elections are no longer discriminated.
@@ -427,7 +428,8 @@ eleicoes_data %>%
   ggplot(aes(x = value)) + 
   geom_histogram(bins = 30) + 
   facet_wrap(. ~ variable,
-             scales = "free_x") 
+             scales = "free_x") +
+  labs(x="Predictor",y="Absolute Frequency")
 ```
 
 * We have evidence that the positive skew has been atenuated by the logarithmic transformations.
@@ -448,7 +450,8 @@ eleicoes_data %>%
   ggplot(aes(x = value)) + 
   geom_histogram(bins = 30) + 
   facet_wrap(. ~ variable,
-             scales = "free_x") 
+             scales = "free_x") +
+  labs(x="Predictor",y="Absolute Frequency")
 ```
 
 * We have evidence that the positive skew has been atenuated by the square root transformation.
@@ -910,7 +913,8 @@ broom::tidy(mod_2006,
   ggplot(aes(reorder(term, estimate),
              estimate )) +
   geom_bar(stat = "identity") + 
-  coord_flip()
+  coord_flip() +
+  labs(x="Coefficient",y="Predictor")
 ```
 
 * Results regarding coefficients corroborate what we saw in the predictors' $p.value$.
@@ -927,7 +931,8 @@ broom::tidy(mod_2010,
   ggplot(aes(reorder(term, estimate),
              estimate )) +
   geom_bar(stat = "identity") + 
-  coord_flip()
+  coord_flip() +
+  labs(x="Coefficient",y="Predictor")
 ```
 
 * Results regarding coefficients seem to corroborate what we saw in the predictors' $p.value$.
@@ -945,7 +950,7 @@ broom::tidy(mod_2006,
   geom_errorbar(size = 0.8, width= 0.4) +
   geom_point(color = "red", size = 2) +
   geom_hline(yintercept = 0, colour = "darkred") +
-  labs(x = "Predictor variable",
+  labs(x = "Predictor",
        y = "Estimated coefficient (95% of confidence)") +
   coord_flip()
 ```
@@ -963,7 +968,7 @@ broom::tidy(mod_2010,
   geom_errorbar(size = 0.8, width= 0.4) +
   geom_point(color = "red", size = 2) +
   geom_hline(yintercept = 0, colour = "darkred") +
-  labs(x = "Predictor variable",
+  labs(x = "Predictor",
        y = "Estimated coefficient (95% of confidence)") +
   coord_flip()
 ```
@@ -1718,5 +1723,7 @@ Now let’s talk about the results taken from the test data (most meaningful).
     + Our model would miss the mark by approximately 41801 (RMSE), that is if candidate had one million votes we would predict 41801 more than we should (or less than we should).
 * The average absolute difference between observed and predicted outcomes (MAE) was approximately 14063.7.
 * The prediction error rate (ERR) was 1.855572.
+
+<br>
 
 > In the model for both elections we could see signs of the model stuggling to fit the data. At the stage of cross validation as expected, and the model for both elections fared worse than the rest, especially in terms of test. 
