@@ -3,11 +3,11 @@ title: "Analysis with Regularization on Brazilian elections"
 subtitle: "Predictive analysis with regularization and Hyperparameter tuning on data about Brazilian elections"
 author: "José Benardi de Souza Nunes"
 output:
-  html_document:
-    df_print: paged
+  html_notebook:
     toc: yes
     toc_float: yes
-  html_notebook:
+  html_document:
+    df_print: paged
     toc: yes
     toc_float: yes
 ---
@@ -92,72 +92,129 @@ data_test %>%
 ```{r results='asis'}
 set.seed(11) # We set the set for reason of reproducibility
 
-data %>% 
-  dplyr::sample_frac(.6) -> data_train
+encoding <- build_encoding(dataSet = data,
+                           cols = c("uf","sexo","grau","ocupacao",
+                                    "partido","estado_civil"),
+                           verbose = F)
 
-# encoding <- build_encoding(dataSet = data_train,
-#                            cols = c("uf","sexo","grau",
-#                                     "partido","estado_civil"),
-#                            verbose = F)
-#
-# data_train <- one_hot_encoder(dataSet = data_train,
-#                            encoding = encoding,
-#                            drop = TRUE,
-#                            verbose = F)
+data <- one_hot_encoder(dataSet = data,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
 
-cat("#### Train Data ",
-    "\n##### Observations: ",nrow(data_train),
-    "\n##### Variables: ",ncol(data_train))
+cat("#### Data Shape",
+    "\n##### Observations: ",nrow(data),
+    "\n##### Variables: ",ncol(data))
 ```
 
-<br>
+<!-- ```{r results='asis'} -->
+<!-- set.seed(11) # We set the set for reason of reproducibility -->
 
-```{r results='asis'}
-set.seed(11) # We set the set for reason of reproducibility
+<!-- data %>% -->
+<!--   dplyr::sample_frac(.6) -> data_train -->
 
-dplyr::anti_join(data, 
-                 data_train, 
-                 by = 'id') -> intermediate_data
+<!-- encoding <- build_encoding(dataSet = data_train, -->
+<!--                            cols = c("uf","sexo","grau","ocupacao", -->
+<!--                                     "partido","estado_civil"), -->
+<!--                            verbose = F) -->
 
-intermediate_data %>% 
-  dplyr::sample_frac(.5) -> data_test
+<!-- data_train <- one_hot_encoder(dataSet = data_train, -->
+<!--                            encoding = encoding, -->
+<!--                            drop = TRUE, -->
+<!--                            verbose = F) -->
 
-# data_test <- one_hot_encoder(dataSet = data_test,
-#                            encoding = encoding,
-#                            drop = TRUE,
-#                            verbose = F)
+<!-- cat("#### Train Data ", -->
+<!--     "\n##### Observations: ",nrow(data_train), -->
+<!--     "\n##### Variables: ",ncol(data_train)) -->
+<!-- ``` -->
 
-cat("#### Test Data ",
-    "\n##### Observations: ",nrow(data_test),
-    "\n##### Variables: ",ncol(data_test))
-```
+<!-- <br> -->
 
-```{r results='asis'}
-set.seed(11) # We set the set for reason of reproducibility
+<!-- ```{r results='asis'} -->
+<!-- set.seed(11) # We set the set for reason of reproducibility -->
 
-dplyr::anti_join(intermediate_data, 
-                 data_test, 
-                 by = 'id') -> data_validate
+<!-- dplyr::anti_join(data, -->
+<!--                  data_train, -->
+<!--                  by = 'id') -> intermediate_data -->
+
+<!-- intermediate_data %>% -->
+<!--   dplyr::sample_frac(.5) -> data_test -->
+
+<!-- data_test <- one_hot_encoder(dataSet = data_test, -->
+<!--                            encoding = encoding, -->
+<!--                            drop = TRUE, -->
+<!--                            verbose = F) -->
+
+<!-- cat("#### Test Data ", -->
+<!--     "\n##### Observations: ",nrow(data_test), -->
+<!--     "\n##### Variables: ",ncol(data_test)) -->
+<!-- ``` -->
+
+<!-- ```{r results='asis'} -->
+<!-- set.seed(11) # We set the set for reason of reproducibility -->
+
+<!-- dplyr::anti_join(intermediate_data, -->
+<!--                  data_test, -->
+<!--                  by = 'id') -> data_validate -->
 
 
-# data_validate <- one_hot_encoder(dataSet = data_validate,
-#                            encoding = encoding,
-#                            drop = TRUE,
-#                            verbose = F)
-rm(intermediate_data)
+<!-- data_validate <- one_hot_encoder(dataSet = data_validate, -->
+<!--                            encoding = encoding, -->
+<!--                            drop = TRUE, -->
+<!--                            verbose = F) -->
+<!-- rm(intermediate_data) -->
 
-cat("#### Validate Data ",
-    "\n##### Observations: ",nrow(data_validate),
-    "\n##### Variables: ",ncol(data_validate))
-```
+<!-- cat("#### Validate Data ", -->
+<!--     "\n##### Observations: ",nrow(data_validate), -->
+<!--     "\n##### Variables: ",ncol(data_validate)) -->
+<!-- ``` -->
 
 # Ridge
 
 ```{r}
-data_train %>%
-  select(-cargo,-ano,-id, -nome) %>%
+data %>%
+  nearZeroVar(saveMetrics = TRUE) %>%
+  tibble::rownames_to_column("variable") %>%
+  filter(nzv == T) %>% 
+  pull(variable) -> near_zero_vars
+```
+
+```{r}
+# 
+# model.cv <- train(mpg ~ ., 
+#                data = mtcars,
+#                method = "lasso",
+#                trControl = fitControl)
+# 
+
+# boot", "boot632", "cv", "repeatedcv", "LOOCV", "LGOCV"
+```
+
+
+```{r}
+lambdaGrid <- expand.grid(lambda = 10^seq(10, -2, length=100))
+
+fitControl <- trainControl(## 10-fold CV
+                           method = "cv", 
+                           number = 10)
+
+data %>%
+  select(-one_of(near_zero_vars)) %>%
+  select(-ano,-id, -nome) %>%
   train(votos ~ .,
         data = .,
-        method = "lm") ->  model
+        method = "ridge",
+        na.action = na.omit,
+        tuneGrid = lambdaGrid,
+        trControl = fitControl,
+        preProcess = c('scale', 'center')) -> model.ridge
+
+model.ridge
+```
+
+```{r}
+model.ridge %>%
+  varImp() %>%
+  ggplot()
 ```
 
