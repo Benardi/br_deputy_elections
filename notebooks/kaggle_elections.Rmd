@@ -217,4 +217,49 @@ model.ridge %>%
   varImp() %>%
   ggplot()
 ```
+```{r}
+fractionGrid <- expand.grid(fraction = seq(1, 1e-2, length=100))
+
+data %>%
+  select(-one_of(near_zero_vars)) %>%
+  select(-ano,-id, -nome) %>%
+  train(votos ~ .,
+        data = .,
+        method = "lasso",
+        na.action = na.omit,
+        tuneGrid = fractionGrid,
+        trControl = fitControl,
+        preProcess = c('scale', 'center')) -> model.lasso
+
+model.lasso
+```
+
+```{r}
+model.lasso %>%
+  varImp() %>%
+  ggplot()
+```
+
+```{r}
+neighborsGrid <- expand.grid(k = seq(1, 100, length=100))
+
+data %>%
+  select(-one_of(near_zero_vars)) %>%
+  select(-ano,-id, -nome) %>%
+  train(votos ~ .,
+        data = .,
+        method = "knn",
+        na.action = na.omit,
+        tuneGrid = neighborsGrid,
+        trControl = fitControl,
+        preProcess = c('scale', 'center')) -> model.knn
+
+model.knn
+```
+
+```{r}
+model.knn %>%
+  varImp() %>%
+  ggplot()
+```
 
