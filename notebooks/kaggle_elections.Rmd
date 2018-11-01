@@ -61,6 +61,13 @@ data %>%
 ```
 
 ```{r}
+data %>%
+  map_df(function(x) sum(is.na(x))) %>%
+  gather(feature, num_nulls) %>%
+  arrange(desc(num_nulls))
+```
+
+```{r}
 data_test <- readr::read_csv(
   here::here('data/test.csv'), 
   progress = FALSE,
@@ -89,9 +96,35 @@ data_test %>%
 
 ```
 
-```{r results='asis'}
-set.seed(11) # We set the set for reason of reproducibility
+```{r}
+data_test %>%
+  map_df(function(x) sum(is.na(x))) %>%
+  gather(feature, num_nulls) %>%
+  arrange(desc(num_nulls))
+```
 
+
+<!-- ```{r} -->
+<!-- data_test %>% -->
+<!--   mutate(recursos_de_pessoas_juridicas = ifelse(is.na(recursos_de_pessoas_juridicas), -->
+<!--                                                mean(recursos_de_pessoas_juridicas, na.rm=TRUE), -->
+<!--                                                recursos_de_pessoas_juridicas), -->
+<!--          recursos_de_partido_politico = ifelse(is.na(recursos_de_partido_politico), -->
+<!--                                                mean(recursos_de_partido_politico, na.rm=TRUE), -->
+<!--                                                recursos_de_partido_politico), -->
+<!--          recursos_proprios = ifelse(is.na(recursos_proprios), -->
+<!--                                                mean(recursos_proprios, na.rm=TRUE), -->
+<!--                                                recursos_proprios), -->
+<!--          recursos_de_outros_candidatos.comites = ifelse(is.na(recursos_de_outros_candidatos.comites), -->
+<!--                                                mean(recursos_de_outros_candidatos.comites, na.rm=TRUE), -->
+<!--                                                recursos_de_outros_candidatos.comites), -->
+<!--          recursos_de_pessoas_fisicas = ifelse(is.na(recursos_de_pessoas_fisicas), -->
+<!--                                                mean(recursos_de_pessoas_fisicas, na.rm=TRUE), -->
+<!--                                                recursos_de_pessoas_fisicas)) -> data_test -->
+
+<!-- ``` -->
+
+```{r results='asis'}
 encoding <- build_encoding(dataSet = data,
                            cols = c("uf","sexo","grau","ocupacao",
                                     "partido","estado_civil"),
@@ -105,6 +138,17 @@ data <- one_hot_encoder(dataSet = data,
 cat("#### Data Shape",
     "\n##### Observations: ",nrow(data),
     "\n##### Variables: ",ncol(data))
+```
+
+```{r results='asis'}
+data_test <- one_hot_encoder(dataSet = data_test,
+                           encoding = encoding,
+                           drop = TRUE,
+                           verbose = F)
+
+cat("#### Test Data Shape",
+    "\n##### Observations: ",nrow(data_test),
+    "\n##### Variables: ",ncol(data_test))
 ```
 
 <!-- ```{r results='asis'} -->
@@ -195,7 +239,7 @@ data %>%
 lambdaGrid <- expand.grid(lambda = 10^seq(10, -2, length=100))
 
 fitControl <- trainControl(## 10-fold CV
-                           method = "cv", 
+                           method = "repeatedcv", 
                            number = 10)
 
 data %>%
@@ -261,5 +305,63 @@ model.knn
 model.knn %>%
   varImp() %>%
   ggplot()
+```
+
+```{r}
+data %>%
+  select(-one_of(near_zero_vars)) %>%
+  select(-ano,-id, -nome) %>%
+  train(votos ~ .,
+        data = .,
+        method = "knn",
+        na.action = na.omit,
+        tuneGrid = data.frame(k = 12),
+        trControl = trainControl(method="none"),
+        preProcess = c('scale', 'center')) -> model.knn.best
+
+model.knn.best
+```
+
+```{r}
+control <- trainControl(method="cv",
+                        number=10,
+                        search="grid")
+set.seed(113)
+
+tunegrid <- expand.grid(.mtry=c(1:50))
+
+data %>%
+  select(-one_of(near_zero_vars)) %>%
+  select(-ano,-id, -nome) %>%
+  train(votos ~.,
+        data=.,
+        method="rf",
+        trControl=control,
+        tuneGrid=tunegrid,
+        na.action = na.omit,
+        preProcess = c('scale', 'center')) -> model.rf
+
+model.rf
+```
+
+
+
+```{r}
+data_test %>% 
+  mutate(sequencial_candidato = as.character(sequencial_candidato)) %>%
+  pull(sequencial_candidato) -> id_column
+
+predict(model.knn.best, data_test) -> predictions
+
+data.frame(ID = id_column,
+           votos = predictions) -> submissão
+
+submissão %>%
+  glimpse()
+```
+
+```{r}
+write_csv(submissão,
+          here::here('data/submission.csv'))
 ```
 
