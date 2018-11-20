@@ -15,6 +15,8 @@ output:
 ```{r}
 library(dataPreparation)
 library(tidyverse)
+library(ggmosaic)
+library(GGally)
 library(caret)
 library(here)
 ```
@@ -69,8 +71,6 @@ data %>%
 ```
 
 ```{r}
-require(GGally)
-
 data %>% 
   select(-ano,
          -sequencial_candidato,
@@ -161,6 +161,36 @@ data %>%
              total_receita)) +
   geom_boxplot() + 
   coord_flip()
+```
+
+```{r}
+data %>%
+ggplot() +
+   geom_mosaic(aes(x = product(sexo, situacao),
+                   fill=sexo)) +
+   theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+```{r}
+data %>%
+ggplot() +
+   geom_mosaic(aes(x = product(grau, situacao),
+                   fill=grau)) +
+   theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+```{r}
+data %>%
+ggplot() +
+   geom_mosaic(aes(x = product(estado_civil, situacao),
+                   fill=estado_civil)) +
+   theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
 ```
 
 ```{r results='asis'}
