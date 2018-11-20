@@ -1,0 +1,180 @@
+---
+title: "Classification on Brazilian elections"
+author: "José Benardi de Souza Nunes"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+---
+
+
+```{r}
+library(dataPreparation)
+library(tidyverse)
+library(caret)
+library(here)
+```
+
+```{r}
+data <- readr::read_csv(
+  here::here('data/train_class.csv'), 
+  progress = FALSE,
+  local=readr::locale("br"),
+  col_types = cols(
+    ano = col_integer(),
+    sequencial_candidato = col_character(),
+    quantidade_doacoes = col_integer(),
+    quantidade_doadores = col_integer(),
+    total_receita = col_double(),
+    media_receita = col_double(),
+    recursos_de_outros_candidatos.comites = col_double(),
+    recursos_de_pessoas_fisicas = col_double(),
+    recursos_de_pessoas_juridicas = col_double(),
+    recursos_proprios = col_double(),
+    `recursos_de_partido_politico` = col_double(),
+    quantidade_despesas = col_integer(),
+    quantidade_fornecedores = col_integer(),
+    total_despesa = col_double(),
+    media_despesa = col_double(),
+    situacao = col_character(),
+    .default = col_character())) %>%
+  mutate(sequencial_candidato = as.numeric(sequencial_candidato),
+         estado_civil = as.factor(estado_civil),
+         ocupacao = as.factor(ocupacao),
+         situacao = as.factor(situacao),
+         partido = as.factor(partido),
+         grau = as.factor(grau),
+         sexo = as.factor(sexo),
+         uf = as.factor(uf))
+
+data %>%
+  glimpse()
+```
+
+```{r}
+data %>%
+  map_df(function(x) sum(is.na(x))) %>%
+  gather(feature, num_nulls) %>%
+  arrange(desc(num_nulls))
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao)) +
+  geom_bar()
+```
+
+```{r}
+require(GGally)
+
+data %>% 
+  select(-ano,
+         -sequencial_candidato,
+         -nome) %>%
+  select(
+    quantidade_doacoes,
+    quantidade_doadores,
+    total_receita,
+    media_receita,
+    recursos_de_outros_candidatos.comites,
+    recursos_de_pessoas_fisicas,
+    recursos_de_pessoas_juridicas,
+    recursos_proprios,
+    `recursos_de_partido_politico`) %>%
+  na.omit() %>%
+  ggcorr(palette = "RdBu", label = TRUE,
+       hjust = 0.95, label_size = 3,size = 3,
+       nbreaks = 5, layout.exp = 5) +
+  ggtitle("Correlation plot for employed variables")
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,recursos_proprios)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             recursos_de_partido_politico)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             recursos_de_outros_candidatos.comites)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             recursos_de_pessoas_fisicas)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             recursos_de_pessoas_juridicas)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             quantidade_doacoes)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             quantidade_doadores)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             media_receita)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r}
+data %>%
+  ggplot(aes(situacao,
+             total_receita)) +
+  geom_boxplot() + 
+  coord_flip()
+```
+
+```{r results='asis'}
+#encoding <- build_encoding(dataSet = data,
+#                           cols = c("uf","sexo","grau","ocupacao",
+#                                    "partido","estado_civil"),
+#                           verbose = F)
+
+#data <- one_hot_encoder(dataSet = data,
+#                           encoding = encoding,
+#                           drop = TRUE,
+#                           verbose = F)
+
+cat("#### Data Shape",
+    "\n##### Observations: ",nrow(data),
+    "\n##### Variables: ",ncol(data))
+```
