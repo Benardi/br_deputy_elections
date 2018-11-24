@@ -21,6 +21,10 @@ library(caret)
 library(here)
 ```
 
+# Data Overview
+
+## Loading Data
+
 ```{r}
 data <- readr::read_csv(
   here::here('data/train_class.csv'), 
@@ -64,11 +68,21 @@ data %>%
   arrange(desc(num_nulls))
 ```
 
+## Data Exploration
+
+### Imbalance on class distribution
+
 ```{r}
 data %>%
   ggplot(aes(situacao)) +
   geom_bar()
 ```
+
+#### There's a strong imbalance in the class distribution of the dataset
+
+* This imbalance can lead to a bias in the model that will learn to overlook the less frequent classes. Such bias can have a negative impact in the model generalization and its performance.
+    + We can restore balance by removing instances from the most frequent class $undersampling$.
+    + We can restore balance by adding instances from the most frequent class $oversampling$.
 
 ```{r}
 data %>% 
@@ -193,13 +207,38 @@ ggplot() +
         axis.ticks.y=element_blank())
 ```
 
+### Splitting data
+
+```{r}
+set.seed(107)
+
+data$id <- 1:nrow(data)
+
+data %>% 
+  dplyr::sample_frac(.8) -> train
+
+cat("#### Train Shape",
+    "\n##### Observations: ",nrow(train),
+    "\n##### Variables: ",ncol(train))
+```
+
+```{r}
+dplyr::anti_join(data, 
+                 train, 
+                 by = 'id') -> test
+
+cat("#### Test Shape",
+    "\n##### Observations: ",nrow(test),
+    "\n##### Variables: ",ncol(test))
+```
+
 ```{r results='asis'}
-#encoding <- build_encoding(dataSet = data,
+# encoding <- build_encoding(dataSet = data,
 #                           cols = c("uf","sexo","grau","ocupacao",
 #                                    "partido","estado_civil"),
 #                           verbose = F)
-
-#data <- one_hot_encoder(dataSet = data,
+# 
+# data <- one_hot_encoder(dataSet = data,
 #                           encoding = encoding,
 #                           drop = TRUE,
 #                           verbose = F)
@@ -208,3 +247,8 @@ cat("#### Data Shape",
     "\n##### Observations: ",nrow(data),
     "\n##### Variables: ",ncol(data))
 ```
+
+```{r}
+
+```
+
