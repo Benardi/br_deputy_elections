@@ -15,6 +15,7 @@ output:
 ```{r}
 library(dataPreparation)
 library(tidyverse)
+library(MLmetrics)
 library(ggmosaic)
 library(GGally)
 library(caret)
@@ -279,25 +280,61 @@ train %>%
   glimpse()
 ```
 
+```{r}
+f1 <- function(data, lev = NULL, model = NULL) {
+  f1_val <- F1_Score(y_pred = data$pred,
+                     y_true = data$obs,
+                     positive = lev[1])
+  c(F1 = f1_val)
+}
+```
+
 
 ```{r}
 rlGrid <- expand.grid( cost = c(200,2,0.02),
                        loss = c("L1", "L2_dual", "L2_primal"),
                        epsilon = c(0.001,0.01) )
-
 train %>%
   select(-one_of(near_zero_vars)) %>%
   select(-ano,-nome) %>%
   caret::train(situacao ~ ., data= .,
                method = "regLogistic",
+               metric = "F1",
                trControl = trainControl(method = "boot",
-                                        classProbs = TRUE),
-               metric = "Accuracy",
+                                        classProbs = TRUE,
+                                        summaryFunction = f1,
+                                        savePredictions = "final"),
                preProc = c("center", "scale"),
                tuneGrid = rlGrid) -> logistic
 
 logistic
 ```
+
+## Quality metric
+
+### Train and Validation
+
+```{r}
+data.frame(expected=logistic$pred$obs, prediction=logistic$pred$pred) %>%
+  mutate(TP = ifelse(expected == "eleito" & prediction == "eleito",1,0),
+         TN = ifelse(expected == "nao_eleito" & prediction == "nao_eleito",1,0),
+         FN = ifelse(expected == "eleito" & prediction == "nao_eleito",1,0),
+         FP = ifelse(expected == "nao_eleito" & prediction == "eleito",1,0)) -> logistic_result
+
+logistic_result  %>%
+  summarize(TP = sum(TP),
+            TN = sum(TN),
+            FP = sum(FP),
+            FN = sum(FN)) %>%
+  mutate(recall = TP / (TP + FN),
+         precision = TP / (TP + FP),
+         accuracy = (TP + TN)/(TP + TN + FP + FN),
+         f_measure = 2 * (precision * recall) / (precision + recall)) -> logistic_result_validat
+
+logistic_result_validat
+```
+
+### Test
 
 ```{r}
 test %>%
@@ -320,7 +357,7 @@ logistic_result  %>%
   mutate(recall = TP / (TP + FN),
          precision = TP / (TP + FP),
          accuracy = (TP + TN)/(TP + TN + FP + FN),
-         f_measure = 2 * (precision * recall) / (precision + recall)) -> logistic_result
+         f_measure = 2 * (precision * recall) / (precision + recall)) -> logistic_result_test
 
-logistic_result 
+logistic_result_test
 ```
