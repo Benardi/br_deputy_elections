@@ -287,6 +287,30 @@ f1 <- function(data, lev = NULL, model = NULL) {
                      positive = lev[1])
   c(F1 = f1_val)
 }
+
+F_Measure <- function(expected, predicted, ...) {
+  data.frame(expected=expected,
+             prediction=predicted) %>%
+      mutate(TP = ifelse(expected == "eleito" & 
+                         prediction == "eleito",1,0),
+             TN = ifelse(expected == "nao_eleito" &
+                         prediction == "nao_eleito",1,0),
+             FN = ifelse(expected == "eleito" &
+                         prediction == "nao_eleito",1,0),
+             FP = ifelse(expected == "nao_eleito" &
+                         prediction == "eleito",1,0)) -> result
+  result  %>%
+    summarize(TP = sum(TP),
+              TN = sum(TN),
+              FP = sum(FP),
+              FN = sum(FN)) %>%
+    mutate(recall = TP / (TP + FN),
+           precision = TP / (TP + FP),
+           accuracy = (TP + TN)/(TP + TN + FP + FN),
+           f_measure = 2 * (precision * recall) / (precision + recall)) -> result
+  
+  return(result)
+}
 ```
 
 
@@ -315,23 +339,10 @@ logistic
 ### Train and Validation
 
 ```{r}
-data.frame(expected=logistic$pred$obs, prediction=logistic$pred$pred) %>%
-  mutate(TP = ifelse(expected == "eleito" & prediction == "eleito",1,0),
-         TN = ifelse(expected == "nao_eleito" & prediction == "nao_eleito",1,0),
-         FN = ifelse(expected == "eleito" & prediction == "nao_eleito",1,0),
-         FP = ifelse(expected == "nao_eleito" & prediction == "eleito",1,0)) -> logistic_result
-
-logistic_result  %>%
-  summarize(TP = sum(TP),
-            TN = sum(TN),
-            FP = sum(FP),
-            FN = sum(FN)) %>%
-  mutate(recall = TP / (TP + FN),
-         precision = TP / (TP + FP),
-         accuracy = (TP + TN)/(TP + TN + FP + FN),
-         f_measure = 2 * (precision * recall) / (precision + recall)) -> logistic_result_validat
-
-logistic_result_validat
+logistic %$% 
+  pred %>% 
+  F_Measure(expected = .$obs,
+            predicted = .$pred)
 ```
 
 ### Test
@@ -339,25 +350,9 @@ logistic_result_validat
 ```{r}
 test %>%
   select(-situacao) %>%
-  stats::predict(object=logistic,.) -> prediction
-
-test$situacao -> expected
-
-data.frame(expected=expected, prediction=prediction) %>%
-  mutate(TP = ifelse(expected == "eleito" & prediction == "eleito",1,0),
-         TN = ifelse(expected == "nao_eleito" & prediction == "nao_eleito",1,0),
-         FN = ifelse(expected == "eleito" & prediction == "nao_eleito",1,0),
-         FP = ifelse(expected == "nao_eleito" & prediction == "eleito",1,0)) -> logistic_result
-
-logistic_result  %>%
-  summarize(TP = sum(TP),
-            TN = sum(TN),
-            FP = sum(FP),
-            FN = sum(FN)) %>%
-  mutate(recall = TP / (TP + FN),
-         precision = TP / (TP + FP),
-         accuracy = (TP + TN)/(TP + TN + FP + FN),
-         f_measure = 2 * (precision * recall) / (precision + recall)) -> logistic_result_test
-
-logistic_result_test
+  select(-one_of(near_zero_vars))  %>% 
+  preProcess(.,method = c("center","scale")) %>%
+  predict(.,test) %>%
+  predict(object=logistic,.) %>%
+  F_Measure(test$situacao,.)
 ```
