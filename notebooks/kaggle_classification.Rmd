@@ -26,28 +26,26 @@ library(here)
 ## Loading Data
 
 ```{r}
-data <- readr::read_csv(
-  here::here('data/train_class.csv'), 
-  progress = FALSE,
-  local=readr::locale("br"),
-  col_types = cols(
-    ano = col_integer(),
-    sequencial_candidato = col_character(),
-    quantidade_doacoes = col_integer(),
-    quantidade_doadores = col_integer(),
-    total_receita = col_double(),
-    media_receita = col_double(),
-    recursos_de_outros_candidatos.comites = col_double(),
-    recursos_de_pessoas_fisicas = col_double(),
-    recursos_de_pessoas_juridicas = col_double(),
-    recursos_proprios = col_double(),
-    `recursos_de_partido_politico` = col_double(),
-    quantidade_despesas = col_integer(),
-    quantidade_fornecedores = col_integer(),
-    total_despesa = col_double(),
-    media_despesa = col_double(),
-    situacao = col_character(),
-    .default = col_character())) %>%
+readr::read_csv(here::here('data/train_class.csv'),
+                progress = FALSE,
+                local=readr::locale("br"),
+                col_types = cols(ano = col_integer(),
+                                 sequencial_candidato = col_character(),
+                                 quantidade_doacoes = col_integer(),
+                                 quantidade_doadores = col_integer(),
+                                 total_receita = col_double(),
+                                 media_receita = col_double(),
+                                 recursos_de_outros_candidatos.comites = col_double(),
+                                 recursos_de_pessoas_fisicas = col_double(),
+                                 recursos_de_pessoas_juridicas = col_double(),
+                                 recursos_proprios = col_double(),
+                                 `recursos_de_partido_politico` = col_double(),
+                                 quantidade_despesas = col_integer(),
+                                 quantidade_fornecedores = col_integer(),
+                                 total_despesa = col_double(),
+                                 media_despesa = col_double(),
+                                 situacao = col_character(),
+                                 .default = col_character())) %>%
   mutate(sequencial_candidato = as.numeric(sequencial_candidato),
          estado_civil = as.factor(estado_civil),
          ocupacao = as.factor(ocupacao),
@@ -55,7 +53,7 @@ data <- readr::read_csv(
          partido = as.factor(partido),
          grau = as.factor(grau),
          sexo = as.factor(sexo),
-         uf = as.factor(uf))
+         uf = as.factor(uf)) -> data
 
 data %>%
   glimpse()
@@ -207,7 +205,7 @@ ggplot() +
         axis.ticks.y=element_blank())
 ```
 
-### Splitting data
+### Splitting data and Encoding
 
 ```{r}
 set.seed(107)
@@ -233,22 +231,96 @@ cat("#### Test Shape",
 ```
 
 ```{r results='asis'}
-# encoding <- build_encoding(dataSet = data,
-#                           cols = c("uf","sexo","grau","ocupacao",
-#                                    "partido","estado_civil"),
-#                           verbose = F)
-# 
-# data <- one_hot_encoder(dataSet = data,
-#                           encoding = encoding,
-#                           drop = TRUE,
-#                           verbose = F)
+encoding <- build_encoding(dataSet = data,
+                          cols = c("uf","sexo","grau","ocupacao",
+                                   "partido","estado_civil"),
+                          verbose = F)
 
-cat("#### Data Shape",
-    "\n##### Observations: ",nrow(data),
-    "\n##### Variables: ",ncol(data))
+train <- one_hot_encoder(dataSet = train,
+                          encoding = encoding,
+                          drop = TRUE,
+                          verbose = F)
+
+cat("#### Train Shape",
+    "\n##### Observations: ",nrow(train),
+    "\n##### Variables: ",ncol(train))
 ```
 
 ```{r}
+test <- one_hot_encoder(dataSet = test,
+                          encoding = encoding,
+                          drop = TRUE,
+                          verbose = F)
 
+cat("#### Data Shape",
+    "\n##### Observations: ",nrow(test),
+    "\n##### Variables: ",ncol(test))
 ```
 
+## Near Zero Variance Predictors
+
+```{r}
+train %>%
+  nearZeroVar(saveMetrics = TRUE) %>%
+  tibble::rownames_to_column("variable") %>%
+  filter(nzv == T) %>% 
+  pull(variable) -> near_zero_vars
+
+near_zero_vars %>% 
+  glimpse() 
+```
+
+
+# Logistic Regression 
+
+```{r}
+train %>% 
+  select(situacao) %>%
+  glimpse()
+```
+
+
+```{r}
+rlGrid <- expand.grid( cost = c(200,2,0.02),
+                       loss = c("L1", "L2_dual", "L2_primal"),
+                       epsilon = c(0.001,0.01) )
+
+train %>%
+  select(-one_of(near_zero_vars)) %>%
+  select(-ano,-nome) %>%
+  caret::train(situacao ~ ., data= .,
+               method = "regLogistic",
+               trControl = trainControl(method = "boot",
+                                        classProbs = TRUE),
+               metric = "Accuracy",
+               preProc = c("center", "scale"),
+               tuneGrid = rlGrid) -> logistic
+
+logistic
+```
+
+```{r}
+test %>%
+  select(-situacao) %>%
+  stats::predict(object=logistic,.) -> prediction
+
+test$situacao -> expected
+
+data.frame(expected=expected, prediction=prediction) %>%
+  mutate(TP = ifelse(expected == "eleito" & prediction == "eleito",1,0),
+         TN = ifelse(expected == "nao_eleito" & prediction == "nao_eleito",1,0),
+         FN = ifelse(expected == "eleito" & prediction == "nao_eleito",1,0),
+         FP = ifelse(expected == "nao_eleito" & prediction == "eleito",1,0)) -> logistic_result
+
+logistic_result  %>%
+  summarize(TP = sum(TP),
+            TN = sum(TN),
+            FP = sum(FP),
+            FN = sum(FN)) %>%
+  mutate(recall = TP / (TP + FN),
+         precision = TP / (TP + FP),
+         accuracy = (TP + TN)/(TP + TN + FP + FN),
+         f_measure = 2 * (precision * recall) / (precision + recall)) -> logistic_result
+
+logistic_result 
+```
