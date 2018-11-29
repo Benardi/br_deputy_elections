@@ -492,3 +492,50 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
+# AdaBoost
+
+```{r}
+gbmGrid <- expand.grid(interaction.depth = c(1, 2, 3, 4, 5),
+                       shrinkage = c(.12, .13),
+                       n.trees = c(55, 56, 57, 58, 59, 60),
+                       n.minobsinnode = c(2,3))
+
+seeds <- vector(mode = "list", length = nrow(train) + 1)
+seeds <- lapply(seeds, function(x) 1:20)
+
+train %>%
+  train(situacao ~ .,
+        data = ., 
+        method = "gbm", 
+        metric = "F1", 
+        verbose = FALSE,
+        tuneGrid = gbmGrid,
+        distribution = "adaboost",
+        trControl = trainControl(savePredictions = "final",
+                                      summaryFunction = f1,
+                                      classProbs = TRUE,
+                                      method = "boot",
+                                      seeds = seeds)) -> model.gbm
+model.gbm
+```
+
+### Train and Validation
+
+```{r}
+model.gbm %$% 
+  pred %>% 
+  F_Measure(expected = .$obs,
+            predicted = .$pred)
+```
+
+### Test
+
+```{r}
+test %>%
+  select(-situacao) %>%
+  predict(object=model.gbm,.) %>%
+  F_Measure(test$situacao,.)
+```
+
+
+
