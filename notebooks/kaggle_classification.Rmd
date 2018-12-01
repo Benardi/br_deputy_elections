@@ -17,9 +17,14 @@ library(dataPreparation)
 library(tidyverse)
 library(MLmetrics)
 library(ggmosaic)
+library(magrittr)
 library(GGally)
+library(rattle)
 library(caret)
 library(here)
+library(DMwR)
+
+theme_set(theme_bw())
 ```
 
 # Data Overview
@@ -74,8 +79,19 @@ data %>%
 ```{r}
 data %>%
   ggplot(aes(situacao)) +
-  geom_bar()
+  geom_bar() +
+  labs(x="Situation", y="Absolute Frequency")
 ```
+
+```{r}
+data %>%
+  group_by(situacao) %>%
+  summarise(num = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(num),
+         proportion = num/total)
+```
+
 
 #### There's a strong imbalance in the class distribution of the dataset
 
@@ -109,7 +125,8 @@ data %>%
 data %>%
   ggplot(aes(situacao,recursos_proprios)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Revenue from personal resources (R$)", x="Situation")
 ```
 
 ```{r}
@@ -117,7 +134,8 @@ data %>%
   ggplot(aes(situacao,
              recursos_de_partido_politico)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Revenue from political party. (R$)", x="Situation")
 ```
 
 ```{r}
@@ -125,7 +143,8 @@ data %>%
   ggplot(aes(situacao,
              recursos_de_outros_candidatos.comites)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Revenue from other candidate’s committees (R$)", x="Situation")
 ```
 
 ```{r}
@@ -133,7 +152,8 @@ data %>%
   ggplot(aes(situacao,
              recursos_de_pessoas_fisicas)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Revenue from individuals (R$)", x="Situation")
 ```
 
 ```{r}
@@ -141,7 +161,8 @@ data %>%
   ggplot(aes(situacao,
              recursos_de_pessoas_juridicas)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Revenue from legal entities (R$)", x="Situation")
 ```
 
 ```{r}
@@ -149,7 +170,8 @@ data %>%
   ggplot(aes(situacao,
              quantidade_doacoes)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Number of donations", x="Situation")
 ```
 
 ```{r}
@@ -157,7 +179,8 @@ data %>%
   ggplot(aes(situacao,
              quantidade_doadores)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Number of donators", x="Situation")
 ```
 
 ```{r}
@@ -165,7 +188,8 @@ data %>%
   ggplot(aes(situacao,
              media_receita)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Mean expenditure", x="Situation")
 ```
 
 ```{r}
@@ -173,7 +197,8 @@ data %>%
   ggplot(aes(situacao,
              total_receita)) +
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() +
+  labs(y="Total expenditure", x="Situation")
 ```
 
 ```{r}
@@ -183,17 +208,21 @@ ggplot() +
                    fill=sexo)) +
    theme(axis.title.y=element_blank(),
         axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+        axis.ticks.y=element_blank()) +
+  guides(fill = guide_legend(title = "Sex"))  +
+  labs(x="Situation") 
 ```
 
 ```{r}
 data %>%
 ggplot() +
-   geom_mosaic(aes(x = product(grau, situacao),
+  geom_mosaic(aes(x = product(grau, situacao),
                    fill=grau)) +
-   theme(axis.title.y=element_blank(),
+  theme(axis.title.y=element_blank(),
         axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+        axis.ticks.y=element_blank()) +
+  guides(fill = guide_legend(title = "Level of education"))  +
+  labs(x="Situation") 
 ```
 
 ```{r}
@@ -203,7 +232,9 @@ ggplot() +
                    fill=estado_civil)) +
    theme(axis.title.y=element_blank(),
         axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+        axis.ticks.y=element_blank()) +
+  guides(fill = guide_legend(title = "Marital Status"))  +
+  labs(x="Situation") 
 ```
 
 ### Splitting data and Encoding
@@ -350,6 +381,20 @@ model.rl
 ```
 
 ```{r}
+model.rl %$%
+  results %>%
+  mutate(cost=as.factor(cost)) %>%
+  ggplot(aes(epsilon,F1,
+             color=cost)) +
+  geom_line() +
+  geom_point() +
+  labs(y= "F1 (Bootstrap)", x="Tolerance") +
+  facet_wrap(. ~ loss, labeller = "label_both") +
+  guides(color = guide_legend(title = "Cost")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+```{r}
 model.rl %>%
   varImp() %$%
   importance %>%
@@ -404,6 +449,22 @@ model.knn
 ```
 
 ```{r}
+model.knn %$%
+  bestTune %$% 
+  k -> bestParameter
+
+model.knn %$%
+  results %>%
+  ggplot(aes(k,F1)) +
+  geom_vline(xintercept = bestParameter,
+             color = "red") +
+  geom_point(color="#0D98E8") +
+  geom_line(color="#0D98E8") +
+  labs(x="#Neighbors",
+       y="F1 (Bootstrap)") 
+```
+
+```{r}
 model.knn %>%
   varImp() %$%
   importance %>%
@@ -455,6 +516,28 @@ caret::train(x = select(train, -situacao),
                                       savePredictions = "final")) -> model.tree
 
 model.tree
+```
+
+```{r}
+model.tree %$%
+  bestTune %$% 
+  cp -> bestParameter
+
+model.tree %$%
+  results %>%
+  ggplot(aes(cp,F1)) +
+  geom_vline(xintercept = bestParameter,
+             color = "red") +
+  geom_point(color="#0D98E8") +
+  geom_line(color="#0D98E8") +
+  labs(x="Complexity Parameter",
+       y="F1 (Bootstrap)") 
+```
+
+```{r}
+model.tree %$%
+  finalModel %>%
+  fancyRpartPlot(sub="")
 ```
 
 ```{r}
@@ -519,6 +602,19 @@ train %>%
 model.gbm
 ```
 
+```{r}
+model.gbm %$%
+  results %>%
+  ggplot(aes(n.trees,F1, 
+             color=as.factor(interaction.depth))) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(. ~ n.minobsinnode+ shrinkage,
+             labeller = "label_both") +
+  labs(x="# Boosting Iterations",y="F1 (Bootstrap)") +
+  guides(color = guide_legend(title = "Max Tree Depth")) 
+```
+
 ### Train and Validation
 
 ```{r}
@@ -537,5 +633,304 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
+# Applying Oversample (SMOTE)
+
+```{r}
+train %>%
+  SMOTE(situacao ~ .,
+        data = ., 
+        perc.over = 200, 
+        perc.under=200) -> oversampled
+
+cat("#### Train Shape",
+    "\n##### Observations: ",nrow(oversampled),
+    "\n##### Variables: ",ncol(oversampled))
+```
 
 
+```{r}
+oversampled %>%
+  group_by(situacao) %>%
+  summarise(num = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(num),
+         proportion = num/total)
+```
+
+# Logistic Regression with SMOTE 
+
+```{r}
+rlGrid <- expand.grid( cost = c(0.02,0.1,2,20,100,200),
+                       loss = c("L1", "L2_dual", "L2_primal"),
+                       epsilon = seq(from=0.001,to=0.1, by=0.005) )
+oversampled %>%
+  caret::train(situacao ~ .,
+               data= .,
+               method = "regLogistic",
+               metric = "F1",
+               trControl = trainControl(method = "boot",
+                                        classProbs = TRUE,
+                                        summaryFunction = f1,
+                                        savePredictions = "final"),
+               tuneGrid = rlGrid) -> model.rl.smote
+
+model.rl.smote
+```
+
+```{r}
+plot(model.rl.smote)
+```
+
+
+```{r}
+model.rl.smote %$%
+  results %>%
+  mutate(cost=as.factor(cost)) %>%
+  ggplot(aes(epsilon,F1,
+             color=cost)) +
+  geom_line() +
+  geom_point() +
+  labs(y= "F1 (Bootstrap)", x="Tolerance") +
+  facet_wrap(. ~ loss, labeller = "label_both") +
+  guides(color = guide_legend(title = "Cost")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+```{r}
+model.rl.smote %>%
+  varImp() %$%
+  importance %>%
+  as.data.frame() %>%
+  rownames_to_column(var="Feature") %>%
+  mutate(Feature = tolower(Feature)) %>%
+  ggplot() +
+  geom_col(aes(x = reorder(Feature,eleito),y = eleito),
+           position = position_dodge(width=0.8),width=0.6) + 
+  labs(x="Feature", y="Overall Importance") +
+  coord_flip()
+```
+
+## Quality metric
+
+### Train and Validation
+
+```{r}
+model.rl.smote %$% 
+  pred %>% 
+  F_Measure(expected = .$obs,
+            predicted = .$pred)
+```
+
+### Test
+
+```{r}
+test %>%
+  select(-situacao) %>%
+  predict(object=model.rl.smote,.) %>%
+  F_Measure(test$situacao,.)
+```
+
+# K nearest neighbours with Smote
+
+```{r}
+neighborsGrid <- expand.grid(.k = seq(from=1, to=50, by=1))
+
+oversampled %>%
+  train(situacao ~ .,
+        data = .,
+        metric = "F1",
+        method = "knn",
+        na.action = na.omit,
+        tuneGrid = neighborsGrid,
+        trControl = trainControl(method = "boot",
+                                 classProbs = TRUE,
+                                 summaryFunction = f1,
+                                 savePredictions = "final")) -> model.knn.smote
+
+model.knn.smote
+```
+
+```{r}
+model.knn.smote %$%
+  bestTune %$% 
+  k -> bestParameter
+
+model.knn.smote %$%
+  results %>%
+  ggplot(aes(k,F1)) +
+  geom_vline(xintercept = bestParameter,
+             color = "red") +
+  geom_point(color="#0D98E8") +
+  geom_line(color="#0D98E8") +
+  labs(x="#Neighbors",
+       y="F1 (Bootstrap)") 
+```
+
+```{r}
+model.knn.smote %>%
+  varImp() %$%
+  importance %>%
+  as.data.frame() %>%
+  rownames_to_column(var="Feature") %>%
+  mutate(Feature = tolower(Feature)) %>%
+  ggplot() +
+  geom_col(aes(x = reorder(Feature,eleito),y = eleito),
+           position = position_dodge(width=0.8),width=0.6) + 
+  labs(x="Feature", y="Overall Importance") +
+  coord_flip()
+```
+
+
+## Quality metric
+
+### Train and Validation
+
+```{r}
+model.knn.smote %$% 
+  pred %>% 
+  F_Measure(expected = .$obs,
+            predicted = .$pred)
+```
+
+### Test
+
+```{r}
+test %>%
+  select(-situacao) %>%
+  predict(object=model.knn.smote,.) %>%
+  F_Measure(test$situacao,.)
+```
+
+# Decision Tree with SMOTE
+
+```{r}
+rpart.grid <- expand.grid(.cp = seq(from=0, to=0.1, by=0.005))
+
+caret::train(x = select(oversampled, -situacao),
+             y = oversampled$situacao,
+             metric = "F1",
+             method = "rpart",
+             na.action = na.omit,
+             tuneGrid = rpart.grid,
+             trControl = trainControl(method = "boot",
+                                      classProbs = TRUE,
+                                      summaryFunction = f1,
+                                      savePredictions = "final")) -> model.tree.smote
+
+model.tree.smote
+```
+
+```{r}
+model.tree.smote %$%
+  bestTune %$% 
+  cp -> bestParameter
+
+model.tree.smote %$%
+  results %>%
+  ggplot(aes(cp,F1)) +
+  geom_vline(xintercept = bestParameter,
+             color = "red") +
+  geom_point(color="#0D98E8") +
+  geom_line(color="#0D98E8") +
+  labs(x="Complexity Parameter",
+       y="F1 (Bootstrap)") 
+```
+
+```{r}
+model.tree.smote %>%
+  varImp() %$%
+  importance %>%
+  as.data.frame() %>%
+  rownames_to_column(var="Feature") %>%
+  mutate(Feature = tolower(Feature)) %>%
+  ggplot() +
+  geom_col(aes(x = reorder(Feature,Overall),y = Overall),
+           position = position_dodge(width=0.8),width=0.6) + 
+  labs(x="Feature", y="Overall Importance") +
+  coord_flip()
+```
+
+```{r}
+model.tree.smote %$%
+  finalModel %>%
+  fancyRpartPlot(sub="")
+```
+
+
+## Quality metric
+
+### Train and Validation
+
+```{r}
+model.tree.smote %$% 
+  pred %>% 
+  F_Measure(expected = .$obs,
+            predicted = .$pred)
+```
+
+### Test
+
+```{r}
+test %>%
+  select(-situacao) %>%
+  predict(object=model.tree.smote,.) %>%
+  F_Measure(test$situacao,.)
+```
+
+# AdaBoost with SMOTE
+
+```{r}
+gbmGrid <- expand.grid(interaction.depth = c(1, 2, 3, 4, 5),
+                       shrinkage = c(.12, .13),
+                       n.trees = c(55, 56, 57, 58, 59, 60),
+                       n.minobsinnode = c(2,3))
+
+seeds <- vector(mode = "list", length = nrow(train) + 1)
+seeds <- lapply(seeds, function(x) 1:20)
+
+oversampled %>%
+  train(situacao ~ .,
+        data = ., 
+        method = "gbm", 
+        metric = "F1", 
+        verbose = FALSE,
+        tuneGrid = gbmGrid,
+        distribution = "adaboost",
+        trControl = trainControl(savePredictions = "final",
+                                      summaryFunction = f1,
+                                      classProbs = TRUE,
+                                      method = "boot",
+                                      seeds = seeds)) -> model.gbm.smote
+model.gbm.smote
+```
+
+```{r}
+model.gbm.smote %$%
+  results %>%
+  ggplot(aes(n.trees,F1, 
+             color=as.factor(interaction.depth))) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(. ~ n.minobsinnode+ shrinkage,
+             labeller = "label_both") +
+  labs(x="# Boosting Iterations",y="F1 (Bootstrap)") +
+  guides(color = guide_legend(title = "Max Tree Depth")) 
+```
+
+### Train and Validation
+
+```{r}
+model.gbm.smote %$% 
+  pred %>% 
+  F_Measure(expected = .$obs,
+            predicted = .$pred)
+```
+
+### Test
+
+```{r}
+test %>%
+  select(-situacao) %>%
+  predict(object=model.gbm.smote,.) %>%
+  F_Measure(test$situacao,.)
+```
