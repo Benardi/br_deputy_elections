@@ -1,6 +1,8 @@
 ---
-title: "Classification on Brazilian elections"
+title: "Classification of candidates in Brazilian elections"
+subtitle: "Binary Classification of candidates in previous Brazilian elections"
 author: "José Benardi de Souza Nunes"
+date: 01/12/2018
 output:
   html_notebook:
     toc: yes
@@ -11,8 +13,21 @@ output:
     toc_float: yes
 ---
 
+<br>
 
-```{r}
+# Introduction
+
+<br>
+
+> Data Analysis and Classification on a subset of data about polls for the 2006 and 2010 elections in Brazil for the "Câmara Federal de Deputados". Data was taken from the [TSE portal](http://www.tse.jus.br/) which originally encompassed approximately 7300 candidates.
+
+<br>
+
+***
+
+<br>
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 library(dataPreparation)
 library(tidyverse)
 library(MLmetrics)
@@ -28,6 +43,49 @@ theme_set(theme_bw())
 ```
 
 # Data Overview
+
+## The variables 
+
+<br>
+
+```
+The response variable is the variable that you are interesting in making measurements and conclusions on.
+
+A predictor variable is a variable used to predict another variable.
+
+Our response variable will be "situacao", we want to study how well the predictor variables can help predict its behavior and how they impact in the linear regression.
+```
+
+<br>
+
+#### Each item corresponds to a candidate, the attributes of each item are as follows:
+
+- **ano** : Year at which the election took place.
+- **sequencial_candidato** : Sequential ID to map the candidates
+- **nome** : Name of the candidate
+- **uf** : Federate state to which the candidate belongs.
+- **partido** : Political party to which the candidate belongs.
+- **quantidade_doacoes** : Number of donations received during political campaign.
+- **quantidade_doadores** : Number of donators that contributed to the candidate's political campaign.
+- **total_receita** : Total revenue. 
+- **media_receita** : Mean revenue. 
+- **recursos_de_outros_candidatos.comites** : Revenue from other candidate's committees.
+- **recursos_de_pessoas_fisicas** : Revenue from individuals.
+- **recursos_de_pessoas_juridicas** : Revenue from legal entities.
+- **recursos_proprios** : Revenue from personal resources.
+- **recursos_de_partido_politico** : Revenue from political party.
+- **quantidade_despesas** : Number of expenses.
+- **quantidade_fornecedores** : Number of suppliers.
+- **total_despesa** : Total expenditure. 
+- **media_despesa** : Mean expenditure.
+- **cargo** : Position.
+- **sexo** : Sex.
+- **grau** : Level of education.
+- **estado_civil** : Marital status. 
+- **ocupacao** : Candidate's occupation up to the election.
+- **situacao** : Whether the candidate was elected.
+
+<br>
 
 ## Loading Data
 
@@ -92,8 +150,9 @@ data %>%
          proportion = num/total)
 ```
 
+<br>
 
-#### There's a strong imbalance in the class distribution of the dataset
+#### There's a strong imbalance in the class distribution of the dataset with around 13% of the entries in the class "eleito" (elected).
 
 * This imbalance can lead to a bias in the model that will learn to overlook the less frequent classes. Such bias can have a negative impact in the model generalization and its performance.
     + We can restore balance by removing instances from the most frequent class $undersampling$.
@@ -121,6 +180,8 @@ data %>%
   ggtitle("Correlation plot for employed variables")
 ```
 
+*  Predictors such as quantidade_doacoes (Number of Donations) and quantidade_doadores (Number of Donators) are highly correlated and therefore redundant. 
+
 ```{r}
 data %>%
   ggplot(aes(situacao,recursos_proprios)) +
@@ -137,6 +198,8 @@ data %>%
   coord_flip() +
   labs(y="Revenue from political party. (R$)", x="Situation")
 ```
+
+* Candidates who were elected had overall more revenue form their political party
 
 ```{r}
 data %>%
@@ -156,6 +219,9 @@ data %>%
   labs(y="Revenue from individuals (R$)", x="Situation")
 ```
 
+* Candidates who were elected had overall more revenue form individuals.
+
+
 ```{r}
 data %>%
   ggplot(aes(situacao,
@@ -164,6 +230,8 @@ data %>%
   coord_flip() +
   labs(y="Revenue from legal entities (R$)", x="Situation")
 ```
+
+* Financial support from legal entities (such as companies) seems to have been a game changer on whether a candidate was elected or not.
 
 ```{r}
 data %>%
@@ -201,6 +269,8 @@ data %>%
   labs(y="Total expenditure", x="Situation")
 ```
 
+* Who got elected spent a lot more, once again money seems to be the real gatekeeper. 
+
 ```{r}
 data %>%
 ggplot() +
@@ -212,6 +282,8 @@ ggplot() +
   guides(fill = guide_legend(title = "Sex"))  +
   labs(x="Situation") 
 ```
+
+* Relatively, we see more men being elected.
 
 ```{r}
 data %>%
@@ -225,6 +297,8 @@ ggplot() +
   labs(x="Situation") 
 ```
 
+* Those with a better level of education seem to have had the upper hand in the elections.  
+
 ```{r}
 data %>%
 ggplot() +
@@ -236,6 +310,12 @@ ggplot() +
   guides(fill = guide_legend(title = "Marital Status"))  +
   labs(x="Situation") 
 ```
+
+* Relatively, married people are more likely to be elected in this group.
+
+<br>
+
+## Preparing data 
 
 ### Splitting data and Encoding
 
@@ -289,7 +369,7 @@ cat("#### Data Shape",
     "\n##### Variables: ",ncol(test))
 ```
 
-## Near Zero Variance Predictors
+### Near Zero Variance Predictors
 
 ```{r}
 train %>%
@@ -311,7 +391,7 @@ near_zero_vars %>%
   glimpse() 
 ```
 
-## Scale and Center
+### Scale and Center
 
 ```{r}
 train %>%
@@ -326,7 +406,19 @@ processParams %>%
 processParams
 ```
 
-# Logistic Regression 
+<br>
+
+***
+
+<br>
+
+# Unbalanced dataset
+
+* In this section we shall test the candidate models without applying any sort of undersampling or oversampling to the employed data
+
+<br>
+
+## Logistic Regression 
 
 ```{r}
 f1 <- function(data, lev = NULL, model = NULL) {
@@ -394,6 +486,8 @@ model.rl %$%
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
+* The hyperparameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
+
 ```{r}
 model.rl %>%
   varImp() %$%
@@ -408,9 +502,12 @@ model.rl %>%
   coord_flip()
 ```
 
-## Quality metric
+* **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in the model.
+* Despite regularization a lot of features were employed, however many were considered less important.
 
-### Train and Validation
+### Quality metric
+
+#### Train and Validation
 
 ```{r}
 model.rl %$% 
@@ -419,7 +516,9 @@ model.rl %$%
             predicted = .$pred)
 ```
 
-### Test
+* A decent although uninspiring result.
+
+#### Test
 
 ```{r}
 test %>%
@@ -428,7 +527,11 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-# K nearest neighbours
+* The test result is rather close to the train/validation results, this is a good sign. However, the model results are not particularly promising.
+
+<br>
+
+## K nearest neighbours
 
 ```{r}
 neighborsGrid <- expand.grid(.k = seq(from=1, to=50, by=1))
@@ -478,10 +581,12 @@ model.knn %>%
   coord_flip()
 ```
 
+* **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
+* The KNN algorithm made use of almost all predictors, this may be a bad sign.
 
-## Quality metric
+### Quality metric
 
-### Train and Validation
+#### Train and Validation
 
 ```{r}
 model.knn %$% 
@@ -490,7 +595,9 @@ model.knn %$%
             predicted = .$pred)
 ```
 
-### Test
+* Here we have worse results than those of the Logistic Regression.
+
+#### Test
 
 ```{r}
 test %>%
@@ -499,7 +606,12 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-# Decision Tree
+* We have modest results, but they are consonant with those from train/test.
+    + This suggests that the KNN model may be too simple for this particular instance, and bias would be the predominant component in the model error.
+
+<br>
+
+## Decision Tree
 
 ```{r}
 rpart.grid <- expand.grid(.cp = seq(from=0, to=0.1, by=0.005))
@@ -540,6 +652,9 @@ model.tree %$%
   fancyRpartPlot(sub="")
 ```
 
+* The best performing tree seems way too simple.
+    + This suggest an underfitting.
+
 ```{r}
 model.tree %>%
   varImp() %$%
@@ -554,10 +669,11 @@ model.tree %>%
   coord_flip()
 ```
 
+* **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
 
-## Quality metric
+### Quality metric
 
-### Train and Validation
+#### Train and Validation
 
 ```{r}
 model.tree %$% 
@@ -565,6 +681,8 @@ model.tree %$%
   F_Measure(expected = .$obs,
             predicted = .$pred)
 ```
+
+* Here we have surprisingly good results considering the simplicity of the tree.
 
 ### Test
 
@@ -575,7 +693,12 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-# AdaBoost
+* The quality metric for test was bigger than for train/validation
+    + This unusual behavior once again hints at the possibility of an underfitting.
+
+<br>
+
+## AdaBoost
 
 ```{r}
 gbmGrid <- expand.grid(interaction.depth = c(1, 2, 3, 4, 5),
@@ -624,6 +747,8 @@ model.gbm %$%
             predicted = .$pred)
 ```
 
+* Here we have better results than what we have seen so far.
+
 ### Test
 
 ```{r}
@@ -632,6 +757,15 @@ test %>%
   predict(object=model.gbm,.) %>%
   F_Measure(test$situacao,.)
 ```
+
+* The loss in the quality metric going from train/validation to test was small enough.
+  + This suggest that the model did in fact fitted the behavior of the problem and not noise.
+
+<br>
+
+***
+
+<br>
 
 # Applying Oversample (SMOTE)
 
@@ -647,7 +781,6 @@ cat("#### Train Shape",
     "\n##### Variables: ",ncol(oversampled))
 ```
 
-
 ```{r}
 oversampled %>%
   group_by(situacao) %>%
@@ -657,7 +790,11 @@ oversampled %>%
          proportion = num/total)
 ```
 
-# Logistic Regression with SMOTE 
+* BY means of SMOTE we have reduce the class imbalance considerably
+
+<br>
+
+## Logistic Regression with SMOTE 
 
 ```{r}
 rlGrid <- expand.grid( cost = c(0.02,0.1,2,20,100,200),
@@ -678,11 +815,6 @@ model.rl.smote
 ```
 
 ```{r}
-plot(model.rl.smote)
-```
-
-
-```{r}
 model.rl.smote %$%
   results %>%
   mutate(cost=as.factor(cost)) %>%
@@ -695,6 +827,8 @@ model.rl.smote %$%
   guides(color = guide_legend(title = "Cost")) +
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
+
+* The hyperparameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
 
 ```{r}
 model.rl.smote %>%
@@ -710,9 +844,11 @@ model.rl.smote %>%
   coord_flip()
 ```
 
-## Quality metric
+* **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
 
-### Train and Validation
+### Quality metric
+
+#### Train and Validation
 
 ```{r}
 model.rl.smote %$% 
@@ -721,7 +857,11 @@ model.rl.smote %$%
             predicted = .$pred)
 ```
 
-### Test
+* The results in train/validation are a little too optimistic in reason of the imbalance correction and should not be taken seriously. 
+
+* Actual progress shall be assessed in the test stage
+
+#### Test
 
 ```{r}
 test %>%
@@ -730,7 +870,11 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-# K nearest neighbours with Smote
+* We can see a substantial improvement compared with our previous attempt using Logistic Regression.
+
+<br>
+
+## K nearest neighbours with SMOTE
 
 ```{r}
 neighborsGrid <- expand.grid(.k = seq(from=1, to=50, by=1))
@@ -766,6 +910,8 @@ model.knn.smote %$%
        y="F1 (Bootstrap)") 
 ```
 
+* Our cross validation led to a knn with K=1, this may hint at a overfitting.
+
 ```{r}
 model.knn.smote %>%
   varImp() %$%
@@ -780,10 +926,11 @@ model.knn.smote %>%
   coord_flip()
 ```
 
+* **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
 
-## Quality metric
+### Quality metric
 
-### Train and Validation
+#### Train and Validation
 
 ```{r}
 model.knn.smote %$% 
@@ -792,7 +939,10 @@ model.knn.smote %$%
             predicted = .$pred)
 ```
 
-### Test
+* We have train/validation results incredibly good, in fact too good.
+    + This adds up to the hypothesis of a overfitting.
+
+#### Test
 
 ```{r}
 test %>%
@@ -801,7 +951,11 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-# Decision Tree with SMOTE
+* And here we have a steep decline in the test results, this is clear evidence that our KNN plus SMOTE overfitted.
+
+<br>
+
+## Decision Tree with SMOTE
 
 ```{r}
 rpart.grid <- expand.grid(.cp = seq(from=0, to=0.1, by=0.005))
@@ -850,16 +1004,19 @@ model.tree.smote %>%
   coord_flip()
 ```
 
+* **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
+
 ```{r}
 model.tree.smote %$%
   finalModel %>%
   fancyRpartPlot(sub="")
 ```
 
+* Here we have a tree of reasonable depth where the tree most important features have been integrated.
 
-## Quality metric
+### Quality metric
 
-### Train and Validation
+#### Train and Validation
 
 ```{r}
 model.tree.smote %$% 
@@ -868,7 +1025,7 @@ model.tree.smote %$%
             predicted = .$pred)
 ```
 
-### Test
+#### Test
 
 ```{r}
 test %>%
@@ -877,7 +1034,11 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-# AdaBoost with SMOTE
+* A result similar to that of the Logistic Regression plus SMOTE
+
+<br>
+
+## AdaBoost with SMOTE
 
 ```{r}
 gbmGrid <- expand.grid(interaction.depth = c(1, 2, 3, 4, 5),
@@ -917,7 +1078,10 @@ model.gbm.smote %$%
   guides(color = guide_legend(title = "Max Tree Depth")) 
 ```
 
-### Train and Validation
+### Quality metric
+
+
+#### Train and Validation
 
 ```{r}
 model.gbm.smote %$% 
@@ -926,7 +1090,11 @@ model.gbm.smote %$%
             predicted = .$pred)
 ```
 
-### Test
+* The results in train/validation are a little too optimistic in reason of the imbalance correction and should not be taken seriously. 
+
+* Actual progress shall be assessed in the test stage
+
+#### Test
 
 ```{r}
 test %>%
@@ -934,3 +1102,5 @@ test %>%
   predict(object=model.gbm.smote,.) %>%
   F_Measure(test$situacao,.)
 ```
+
+* Results similar to those of the Logistic Regression
