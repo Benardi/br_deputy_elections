@@ -317,7 +317,7 @@ ggplot() +
 
 ## Preparing data 
 
-### Splitting data and Encoding
+### Splitting data
 
 ```{r}
 set.seed(107)
@@ -342,8 +342,57 @@ cat("#### Test Shape",
     "\n##### Variables: ",ncol(test))
 ```
 
+```{r}
+train %>%
+    select(-ano,-nome,-id,-sequencial_candidato) -> train
+
+test %>%
+    select(-ano,-nome,-id,-sequencial_candidato) -> test
+```
+
+```{r}
+train %>%
+  dplyr::select_if(.,is.numeric) -> train.numeric
+
+train %>%
+  dplyr::select_if(.,negate(is.numeric)) -> train.categorical
+
+test %>%
+  dplyr::select_if(.,is.numeric) -> test.numeric
+
+test %>%
+  dplyr::select_if(.,negate(is.numeric)) -> test.categorical
+
+```
+
+### Scale and Center
+
+```{r}
+train.numeric %>%
+  preProcess(.,method = c("center","scale")) -> processParams
+
+processParams %>%
+  predict(.,train.numeric) -> train.numeric 
+
+processParams %>% 
+  predict(.,test.numeric) -> test.numeric 
+
+processParams
+```
+
+###  One Hot Encoding
+
+```{r}
+train.numeric %>%
+  dplyr::bind_cols(train.categorical) -> train
+
+test.numeric %>%
+  dplyr::bind_cols(test.categorical) -> test
+```
+
+
 ```{r results='asis'}
-encoding <- build_encoding(dataSet = data,
+encoding <- build_encoding(dataSet = train,
                           cols = c("uf","sexo","grau","ocupacao",
                                    "partido","estado_civil"),
                           verbose = F)
@@ -379,31 +428,14 @@ train %>%
   pull(variable) -> near_zero_vars
 
 train %>% 
-    select(-one_of(near_zero_vars)) %>%
-    select(-ano,-nome,-id,-sequencial_candidato) -> train
+    select(-one_of(near_zero_vars)) -> train
 
 test %>%
-    select(-one_of(near_zero_vars)) %>%
-    select(-ano,-nome,-id,-sequencial_candidato) -> test
+    select(-one_of(near_zero_vars)) -> test
 
 
 near_zero_vars %>% 
   glimpse() 
-```
-
-### Scale and Center
-
-```{r}
-train %>%
-  preProcess(.,method = c("center","scale")) -> processParams
-
-processParams %>%
-  predict(.,train) -> train 
-
-processParams %>% 
-  predict(.,test) -> test 
-
-processParams
 ```
 
 <br>
@@ -1079,7 +1111,6 @@ model.gbm.smote %$%
 ```
 
 ### Quality metric
-
 
 #### Train and Validation
 
