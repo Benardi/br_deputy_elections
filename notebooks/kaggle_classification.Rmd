@@ -4,11 +4,11 @@ subtitle: "Binary Classification of candidates in previous Brazilian elections"
 author: "José Benardi de Souza Nunes"
 date: 01/12/2018
 output:
-  html_notebook:
-    toc: yes
-    toc_float: yes
   html_document:
     df_print: paged
+    toc: yes
+    toc_float: yes
+  html_notebook:
     toc: yes
     toc_float: yes
 ---
@@ -486,7 +486,7 @@ F_Measure <- function(expected, predicted, ...) {
 ```
 
 
-```{r}
+```{r, eval=F, echo=T}
 rlGrid <- expand.grid( cost = c(200,2,0.02),
                        loss = c("L1", "L2_dual", "L2_primal"),
                        epsilon = c(0.001,0.01) )
@@ -501,8 +501,13 @@ train %>%
                                         savePredictions = "final"),
                tuneGrid = rlGrid) -> model.rl
 
+```
+
+```{r}
 model.rl
 ```
+
+<br>
 
 ```{r}
 model.rl %$%
@@ -520,6 +525,8 @@ model.rl %$%
 
 * The hyperparameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
 
+<br>
+
 ```{r}
 model.rl %>%
   varImp() %$%
@@ -536,6 +543,8 @@ model.rl %>%
 
 * **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in the model.
 * Despite regularization a lot of features were employed, however many were considered less important.
+
+<br>
 
 ### Quality metric
 
@@ -565,7 +574,7 @@ test %>%
 
 ## K nearest neighbours
 
-```{r}
+```{r, eval=F, echo=T}
 neighborsGrid <- expand.grid(.k = seq(from=1, to=50, by=1))
 
 train %>%
@@ -579,9 +588,13 @@ train %>%
                                  classProbs = TRUE,
                                  summaryFunction = f1,
                                  savePredictions = "final")) -> model.knn
+```
 
+```{r}
 model.knn
 ```
+
+<br>
 
 ```{r}
 model.knn %$%
@@ -599,6 +612,8 @@ model.knn %$%
        y="F1 (Bootstrap)") 
 ```
 
+<br>
+
 ```{r}
 model.knn %>%
   varImp() %$%
@@ -615,6 +630,8 @@ model.knn %>%
 
 * **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
 * The KNN algorithm made use of almost all predictors, this may be a bad sign.
+
+<br>
 
 ### Quality metric
 
@@ -645,7 +662,7 @@ test %>%
 
 ## Decision Tree
 
-```{r}
+```{r, eval=F, echo=T}
 rpart.grid <- expand.grid(.cp = seq(from=0, to=0.1, by=0.005))
 
 caret::train(x = select(train, -situacao),
@@ -658,9 +675,13 @@ caret::train(x = select(train, -situacao),
                                       classProbs = TRUE,
                                       summaryFunction = f1,
                                       savePredictions = "final")) -> model.tree
+```
 
+```{r}
 model.tree
 ```
+
+<br>
 
 ```{r}
 model.tree %$%
@@ -678,6 +699,8 @@ model.tree %$%
        y="F1 (Bootstrap)") 
 ```
 
+<br>
+
 ```{r}
 model.tree %$%
   finalModel %>%
@@ -686,6 +709,8 @@ model.tree %$%
 
 * The best performing tree seems way too simple.
     + This suggest an underfitting.
+
+<br>
 
 ```{r}
 model.tree %>%
@@ -702,6 +727,8 @@ model.tree %>%
 ```
 
 * **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
+
+<br>
 
 ### Quality metric
 
@@ -732,48 +759,42 @@ test %>%
 
 ## AdaBoost
 
-```{r}
-gbmGrid <- expand.grid(interaction.depth = c(1, 2, 3, 4, 5),
-                       shrinkage = c(.12, .13),
-                       n.trees = c(55, 56, 57, 58, 59, 60),
-                       n.minobsinnode = c(2,3))
-
-seeds <- vector(mode = "list", length = nrow(train) + 1)
-seeds <- lapply(seeds, function(x) 1:20)
-
-train %>%
-  train(situacao ~ .,
-        data = ., 
-        method = "gbm", 
-        metric = "F1", 
-        verbose = FALSE,
-        tuneGrid = gbmGrid,
-        distribution = "adaboost",
-        trControl = trainControl(savePredictions = "final",
-                                      summaryFunction = f1,
-                                      classProbs = TRUE,
-                                      method = "boot",
-                                      seeds = seeds)) -> model.gbm
-model.gbm
+```{r, eval=F, echo=T}
+train(x = select(train, -situacao),
+      y = train$situacao,
+      metric = "F1",
+      na.action = na.exclude,
+      method='adaboost',
+      tuneLength=2,
+      trControl = trainControl(savePredictions = "final",
+                               summaryFunction = f1,
+                               classProbs = TRUE,
+                               method = "boot")) -> model.ada
 ```
 
 ```{r}
-model.gbm %$%
+model.ada
+```
+
+<br>
+
+```{r}
+model.ada %$%
   results %>%
-  ggplot(aes(n.trees,F1, 
-             color=as.factor(interaction.depth))) +
-  geom_point() +
+  ggplot(aes(nIter,F1, 
+             color=as.factor(method))) +
+  geom_point(shape=1) +
   geom_line() +
-  facet_wrap(. ~ n.minobsinnode+ shrinkage,
-             labeller = "label_both") +
-  labs(x="# Boosting Iterations",y="F1 (Bootstrap)") +
-  guides(color = guide_legend(title = "Max Tree Depth")) 
+  labs(x="# Trees",y="F1 (Bootstrap)") +
+  guides(color = guide_legend(title = "Method"))
 ```
+
+<br>
 
 ### Train and Validation
 
 ```{r}
-model.gbm %$% 
+model.ada %$% 
   pred %>% 
   F_Measure(expected = .$obs,
             predicted = .$pred)
@@ -786,12 +807,12 @@ model.gbm %$%
 ```{r}
 test %>%
   select(-situacao) %>%
-  predict(object=model.gbm,.) %>%
+  predict(object=model.ada,.) %>%
   F_Measure(test$situacao,.)
 ```
 
 * The loss in the quality metric going from train/validation to test was small enough.
-  + This suggest that the model did in fact fitted the behavior of the problem and not noise.
+  + This suggest that the model did in fact fit the behavior of the problem and not noise.
 
 <br>
 
@@ -828,7 +849,7 @@ oversampled %>%
 
 ## Logistic Regression with SMOTE 
 
-```{r}
+```{r, eval=F, echo=T}
 rlGrid <- expand.grid( cost = c(0.02,0.1,2,20,100,200),
                        loss = c("L1", "L2_dual", "L2_primal"),
                        epsilon = seq(from=0.001,to=0.1, by=0.005) )
@@ -842,9 +863,13 @@ oversampled %>%
                                         summaryFunction = f1,
                                         savePredictions = "final"),
                tuneGrid = rlGrid) -> model.rl.smote
+```
 
+```{r}
 model.rl.smote
 ```
+
+<br>
 
 ```{r}
 model.rl.smote %$%
@@ -861,6 +886,8 @@ model.rl.smote %$%
 ```
 
 * The hyperparameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
+
+<br>
 
 ```{r}
 model.rl.smote %>%
@@ -908,7 +935,7 @@ test %>%
 
 ## K nearest neighbours with SMOTE
 
-```{r}
+```{r, eval=F, echo=T}
 neighborsGrid <- expand.grid(.k = seq(from=1, to=50, by=1))
 
 oversampled %>%
@@ -922,9 +949,13 @@ oversampled %>%
                                  classProbs = TRUE,
                                  summaryFunction = f1,
                                  savePredictions = "final")) -> model.knn.smote
+```
 
+```{r}
 model.knn.smote
 ```
+
+<br>
 
 ```{r}
 model.knn.smote %$%
@@ -944,6 +975,8 @@ model.knn.smote %$%
 
 * Our cross validation led to a knn with K=1, this may hint at a overfitting.
 
+<br>
+
 ```{r}
 model.knn.smote %>%
   varImp() %$%
@@ -959,6 +992,8 @@ model.knn.smote %>%
 ```
 
 * **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
+
+<br>
 
 ### Quality metric
 
@@ -989,7 +1024,7 @@ test %>%
 
 ## Decision Tree with SMOTE
 
-```{r}
+```{r, eval=F, echo=T}
 rpart.grid <- expand.grid(.cp = seq(from=0, to=0.1, by=0.005))
 
 caret::train(x = select(oversampled, -situacao),
@@ -1002,9 +1037,13 @@ caret::train(x = select(oversampled, -situacao),
                                       classProbs = TRUE,
                                       summaryFunction = f1,
                                       savePredictions = "final")) -> model.tree.smote
+```
 
+```{r}
 model.tree.smote
 ```
+
+<br>
 
 ```{r}
 model.tree.smote %$%
@@ -1022,6 +1061,8 @@ model.tree.smote %$%
        y="F1 (Bootstrap)") 
 ```
 
+<br>
+
 ```{r}
 model.tree.smote %>%
   varImp() %$%
@@ -1038,6 +1079,8 @@ model.tree.smote %>%
 
 * **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
 
+<br>
+
 ```{r}
 model.tree.smote %$%
   finalModel %>%
@@ -1045,6 +1088,8 @@ model.tree.smote %$%
 ```
 
 * Here we have a tree of reasonable depth where the tree most important features have been integrated.
+
+<br>
 
 ### Quality metric
 
@@ -1072,50 +1117,45 @@ test %>%
 
 ## AdaBoost with SMOTE
 
-```{r}
-gbmGrid <- expand.grid(interaction.depth = c(1, 2, 3, 4, 5),
-                       shrinkage = c(.12, .13),
-                       n.trees = c(55, 56, 57, 58, 59, 60),
-                       n.minobsinnode = c(2,3))
+```{r, eval=F, echo=T}
+train(x = select(oversampled, -situacao),
+      y = oversampled$situacao,
+      metric = "F1",
+      na.action = na.exclude,
+      method='adaboost',
+      tuneLength=2,
+      trControl = trainControl(savePredictions = "final",
+                               summaryFunction = f1,
+                               classProbs = TRUE,
+                               method = "boot")) -> model.ada.smote
 
-seeds <- vector(mode = "list", length = nrow(train) + 1)
-seeds <- lapply(seeds, function(x) 1:20)
-
-oversampled %>%
-  train(situacao ~ .,
-        data = ., 
-        method = "gbm", 
-        metric = "F1", 
-        verbose = FALSE,
-        tuneGrid = gbmGrid,
-        distribution = "adaboost",
-        trControl = trainControl(savePredictions = "final",
-                                      summaryFunction = f1,
-                                      classProbs = TRUE,
-                                      method = "boot",
-                                      seeds = seeds)) -> model.gbm.smote
-model.gbm.smote
 ```
 
 ```{r}
-model.gbm.smote %$%
+model.ada.smote
+```
+
+<br>
+
+```{r}
+model.ada.smote %$%
   results %>%
-  ggplot(aes(n.trees,F1, 
-             color=as.factor(interaction.depth))) +
-  geom_point() +
+  ggplot(aes(nIter,F1, 
+             color=as.factor(method))) +
+  geom_point(shape=1) +
   geom_line() +
-  facet_wrap(. ~ n.minobsinnode+ shrinkage,
-             labeller = "label_both") +
-  labs(x="# Boosting Iterations",y="F1 (Bootstrap)") +
-  guides(color = guide_legend(title = "Max Tree Depth")) 
+  labs(x="# Trees",y="F1 (Bootstrap)") +
+  guides(color = guide_legend(title = "Method"))
 ```
+
+<br>
 
 ### Quality metric
 
 #### Train and Validation
 
 ```{r}
-model.gbm.smote %$% 
+model.ada.smote %$% 
   pred %>% 
   F_Measure(expected = .$obs,
             predicted = .$pred)
@@ -1130,7 +1170,7 @@ model.gbm.smote %$%
 ```{r}
 test %>%
   select(-situacao) %>%
-  predict(object=model.gbm.smote,.) %>%
+  predict(object=model.ada.smote,.) %>%
   F_Measure(test$situacao,.)
 ```
 
