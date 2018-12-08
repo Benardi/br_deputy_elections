@@ -493,3 +493,91 @@ neuralNetCV <- function(df,
 }
 ```
 
+# Hyper-parameter Tuning
+
+```{r}
+tuneNeuralNetwork <- function(model,data,paramsGrid,
+                              target_range= 39:40,k=5) {
+   environment(neuralNetCV) <- environment()    
+
+    best_accuracy <- 0
+    best_loss <- 0
+    best_tune <- NULL
+    best_history <- NULL
+    best_model <- NULL
+    optmizer <- NULL
+    losses <- c()
+    acc <- c()
+
+     for(i in 1:nrow(paramsGrid)) {  
+#     for(i in c(1)) {  
+        row <- paramsGrid[i,]
+        if (row$optim_approach == "sgd") 
+            optmizer <- optimizer_sgd(lr = 0.01)
+        else if (row$optim_approach == "rmsprop") 
+            optmizer <- optimizer_rmsprop(lr = 0.001, rho = 0.9)
+        else if (row$optim_approach == "adam") 
+            optmizer <- optimizer_adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999)
+
+        # apply CV Kfold to particular set of params
+        neuralNetCV(data,
+                    target_range,
+                    model,
+                    k,
+                    loss_method = paste0(row$loss_method),
+                    optim_approach = optmizer,
+                    summary_metrics= paste0(row$summary_metrics),
+                    epochs = paste0(row$epochs),
+                    batch_size = paste0(row$batch_size),
+                    validation_split = paste0(row$validation_split)) -> cvsummary
+
+        cvsummary %$%
+        result %$%
+        acc %>%
+        mean() -> mean_accuracy
+
+        cvsummary %$%
+        result %$%
+        loss %>%
+        mean() -> mean_loss
+       
+        losses <- append(losses,mean_loss)  
+        acc <- append(acc, mean_accuracy)
+
+        if(mean_accuracy > best_accuracy) {
+            best_accuracy <- mean_accuracy
+            best_history <- cvsummary$history
+            best_model <- cvsummary$model
+            best_result <- mean_accuracy
+            best_loss <- mean_loss
+            best_tune <- row
+        }    
+    }
+    paramsGrid$loss <- losses
+    paramsGrid$accuracy <- acc
+    best_tune$accuracy <- best_accuracy
+    best_tune$loss <- best_loss
+
+    result <- list("history"=best_history,
+                   "best_tune"=best_tune,
+                   "iterations"=paramsGrid,
+                   "best_model"=best_model)
+    return(result)
+
+    }
+```
+
+```{r}
+optm <- c("sgd", "rmsprop", "adam")
+validation_split <- c(0.2,0.3,0.4)
+
+paramsGrid <- expand.grid(optim_approach=optm,
+                          loss_method = 'binary_crossentropy',
+                          summary_metrics='accuracy',
+                          epochs = 200,
+                          batch_size = 5,
+                          validation_split = validation_split)
+
+paramsGrid
+```
+
