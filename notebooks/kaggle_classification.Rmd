@@ -66,7 +66,7 @@ Our response variable will be "situacao", we want to study how well the predicto
 - **uf** : Federate state to which the candidate belongs.
 - **partido** : Political party to which the candidate belongs.
 - **quantidade_doacoes** : Number of donations received during political campaign.
-- **quantidade_doadores** : Number of donators that contributed to the candidate's political campaign.
+- **quantidade_doadores** : Number of donors that contributed to the candidate's political campaign.
 - **total_receita** : Total revenue. 
 - **media_receita** : Mean revenue. 
 - **recursos_de_outros_candidatos.comites** : Revenue from other candidate's committees.
@@ -180,7 +180,7 @@ data %>%
   ggtitle("Correlation plot for employed variables")
 ```
 
-*  Predictors such as quantidade_doacoes (Number of Donations) and quantidade_doadores (Number of Donators) are highly correlated and therefore redundant. 
+*  Predictors such as quantidade_doacoes (Number of Donations) and quantidade_doadores (Number of Donors) are highly correlated and therefore redundant. 
 
 ```{r}
 data %>%
@@ -523,7 +523,7 @@ model.rl %$%
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
-* The hyperparameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
+* The hyper-parameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
 
 <br>
 
@@ -644,7 +644,7 @@ model.knn %$%
             predicted = .$pred)
 ```
 
-* Here we have worse results than those of the Logistic Regression.
+* Here we have slightly better results than those of the Logistic Regression.
 
 #### Test
 
@@ -707,8 +707,8 @@ model.tree %$%
   fancyRpartPlot(sub="")
 ```
 
-* The best performing tree seems way too simple.
-    + This suggest an underfitting.
+* The best performing tree seems simple yet reasonable.
+    + This tree may be in the border of an underfitting.
 
 <br>
 
@@ -727,6 +727,7 @@ model.tree %>%
 ```
 
 * **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
+  + The tree used very few predictors which may indicate an underfitting, or simply that the tree captured the few meaningful predictors.
 
 <br>
 
@@ -752,8 +753,7 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-* The quality metric for test was bigger than for train/validation
-    + This unusual behavior once again hints at the possibility of an underfitting.
+* We have slightly better results than those seen till now, on top of that they are consonant with those from train/test.
 
 <br>
 
@@ -885,7 +885,7 @@ model.rl.smote %$%
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
-* The hyperparameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
+* The hyper-parameter **Loss** seems to be the particularly meaningful for the Logistic Regression performance in this problem.
 
 <br>
 
@@ -904,6 +904,7 @@ model.rl.smote %>%
 ```
 
 * **Total Receita** (Total Revenue), **Total Despesa** (Total Expenditure) and **Recursos de pessoas jurídicas** (Revenue from Legal Entities) are together the three most important features in this model as well.
+* Despite regularization a lot of features were employed, however many were considered less important.
 
 ### Quality metric
 
@@ -916,9 +917,8 @@ model.rl.smote %$%
             predicted = .$pred)
 ```
 
-* The results in train/validation are a little too optimistic in reason of the imbalance correction and should not be taken seriously. 
-
-* Actual progress shall be assessed in the test stage
+* The results in train/validation are overly optimistic in reason of the imbalance correction and should not be taken seriously. 
+  + Actual progress shall be assessed in the test stage
 
 #### Test
 
@@ -1006,6 +1006,8 @@ model.knn.smote %$%
             predicted = .$pred)
 ```
 
+* The results in train/validation are overly optimistic in reason of the imbalance correction and should not be taken seriously. 
+
 * We have train/validation results incredibly good, in fact too good.
     + This adds up to the hypothesis of a overfitting.
 
@@ -1018,7 +1020,7 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-* And here we have a steep decline in the test results, this is clear evidence that our KNN plus SMOTE overfitted.
+* And here we have a **steep** decline in the test results, this is clear evidence that our KNN plus SMOTE overfitted.
 
 <br>
 
@@ -1102,6 +1104,8 @@ model.tree.smote %$%
             predicted = .$pred)
 ```
 
+* The results in train/validation are overly optimistic in reason of the imbalance correction and should not be taken seriously. 
+
 #### Test
 
 ```{r}
@@ -1161,7 +1165,7 @@ model.ada.smote %$%
             predicted = .$pred)
 ```
 
-* The results in train/validation are a little too optimistic in reason of the imbalance correction and should not be taken seriously. 
+* The results in train/validation are overly optimistic in reason of the imbalance correction and should not be taken seriously. 
 
 * Actual progress shall be assessed in the test stage
 
@@ -1174,4 +1178,4 @@ test %>%
   F_Measure(test$situacao,.)
 ```
 
-* Results similar to those of the Logistic Regression
+* Results similar to those of the Logistic Regression plus SMOTE
