@@ -26,12 +26,15 @@ output:
 
 <br>
 
-```{r}
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 library(dataPreparation)
 library(tidyverse)
+library(magrittr)
+library(janitor)
 library(GGally)
 library(caret)
 library(keras)
+library(ROSE)
 library(here)
 
 theme_set(theme_bw())
@@ -111,6 +114,8 @@ readr::read_csv(here::here('data/train_class.csv'),
          ocupacao = as.factor(ocupacao),
          situacao = as.factor(situacao),
          partido = as.factor(partido),
+         cargo = as.factor(cargo),
+         nome = as.factor(nome),
          grau = as.factor(grau),
          sexo = as.factor(sexo),
          uf = as.factor(uf)) -> data
@@ -178,9 +183,9 @@ data %>%
 
 *  Predictors such as quantidade_doacoes (Number of Donations) and quantidade_doadores (Number of Donors) are highly correlated and therefore redundant. 
 
-## Preparing data 
+# Preparing data 
 
-### Splitting data
+## Splitting data
 
 ```{r}
 set.seed(107)
@@ -205,6 +210,8 @@ cat("#### Test Shape",
     "\n##### Variables: ",ncol(test))
 ```
 
+## Applying SMOTE
+
 ```{r}
 train %>%
     select(-ano,-nome,-id,-sequencial_candidato) -> train
@@ -228,7 +235,7 @@ test %>%
 
 ```
 
-### Scale and Center
+## Scale and Center
 
 ```{r}
 train.numeric %>%
@@ -243,7 +250,33 @@ processParams %>%
 processParams
 ```
 
-###  One Hot Encoding
+## Generate Balanced Data with ROSE algorithm
+
+```{r}
+train %>%
+  clean_names() %>%
+  ROSE(situacao ~ .,
+       data =.,
+       seed = 107) %$%
+  data -> train.rose
+
+cat("#### Train Shape",
+    "\n##### Observations: ",nrow(train.rose),
+    "\n##### Variables: ",ncol(train.rose))
+```
+
+
+```{r}
+train.rose %>%
+  group_by(situacao) %>%
+  summarise(num = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(num),
+         proportion = num/total)
+```
+
+
+##  One Hot Encoding
 
 ```{r}
 train.numeric %>%
@@ -257,7 +290,7 @@ test.numeric %>%
 ```{r results='asis'}
 encoding <- build_encoding(dataSet = train,
                           cols = c("uf","sexo","grau","ocupacao",
-                                   "partido","estado_civil"),
+                                   "partido","estado_civil","situacao"),
                           verbose = F)
 
 train <- one_hot_encoder(dataSet = train,
@@ -270,6 +303,18 @@ cat("#### Train Shape",
     "\n##### Variables: ",ncol(train))
 ```
 
+```{r}
+train.rose <- one_hot_encoder(dataSet = train.rose,
+                              encoding = encoding,
+                              drop = TRUE,
+                              verbose = F)
+
+cat("#### Data Shape",
+    "\n##### Observations: ",nrow(train.rose),
+    "\n##### Variables: ",ncol(train.rose))
+```
+
+
 ```{r results='asis'}
 test <- one_hot_encoder(dataSet = test,
                           encoding = encoding,
@@ -279,5 +324,79 @@ test <- one_hot_encoder(dataSet = test,
 cat("#### Data Shape",
     "\n##### Observations: ",nrow(test),
     "\n##### Variables: ",ncol(test))
+```
+
+## Near Zero Variance Predictors
+
+```{r}
+train %>%
+  nearZeroVar(saveMetrics = TRUE) %>%
+  tibble::rownames_to_column("variable") %>%
+  filter(nzv == T) %>% 
+  pull(variable) -> near_zero_vars
+
+train %>% 
+    select(-one_of(near_zero_vars)) -> train
+
+train.rose %>% 
+    select(-one_of(near_zero_vars)) -> train.rose
+
+test %>%
+    select(-one_of(near_zero_vars)) -> test
+
+
+near_zero_vars %>% 
+  glimpse() 
+```
+
+## Conform data to Keras 
+
+```{r}
+train <- as.matrix(train)
+
+dimnames(train) <- NULL
+
+x_train <- train[,1:38]
+y_train <- train[,39:40]
+
+y_train %>%
+  head(10)
+```
+
+```{r}
+train.rose <- as.matrix(train.rose)
+
+dimnames(train.rose) <- NULL
+
+x_train.rose <- train.rose[,1:38]
+y_train.rose <- train.rose[,39:40]
+
+y_train.rose %>%
+  head(10)
+```
+
+
+```{r}
+test <- as.matrix(test)
+
+dimnames(test) <- NULL
+
+x_test <- test[,1:38]
+y_test <- test[,39:40]
+
+y_test %>%
+  head(10)
+```
+
+# Train model
+
+```{r}
+# # Initialize a sequential model
+# model.simple <- keras_model_sequential()
+# 
+# # Add layers to the model
+# model.simple %>%
+#   layer_dense(units = 8, activation = 'relu', input_shape = c(38)) %>% 
+#   layer_dense(units = 2, activation = 'softmax')
 ```
 
