@@ -352,6 +352,19 @@ near_zero_vars %>%
 ## Conform data to Keras 
 
 ```{r}
+split_target_predictors <- function(df, target_range) {
+  df_matrix <- as.matrix(df)
+  dimnames(df_matrix) <- NULL
+  x_data <- df_matrix[,-target_range]
+  y_data <- df_matrix[,target_range]
+  
+  newData <- list("predictors" = x_data, "target" = y_data)
+  return(newData)
+}
+```
+
+```{r}
+train_df <- train
 train <- as.matrix(train)
 
 dimnames(train) <- NULL
@@ -398,5 +411,85 @@ y_test %>%
 # model.simple %>%
 #   layer_dense(units = 8, activation = 'relu', input_shape = c(38)) %>% 
 #   layer_dense(units = 2, activation = 'softmax')
+```
+
+
+# Cross Validation
+
+```{r}
+neuralNetCV <- function(df,
+                        target_range,
+                        model,
+                        k=5,
+                        loss_method = 'binary_crossentropy',
+                        optim_approach = 'adam',
+                        summary_metrics='accuracy',
+                        epochs = 200,
+                        batch_size = 5,
+                        validation_split = 0.2) {
+    
+  model %>% 
+    compile(
+        loss = loss_method,
+        optimizer = optim_approach,
+        metrics = summary_metrics)
+  df %>%
+    mutate(folds = sample(rep_len(1:k, nrow(.)))) -> df
+  
+  result <-  data.frame("loss"=c(),metrics=c()) 
+    
+  for(f in unique(df$folds)){
+
+  # split into train/validation
+    df %>%
+      filter(folds == f) -> train_df
+    
+    df %>%
+      filter(folds != f) -> valid_df
+      
+ # Remove auxiliary column
+    train_df %>%
+      select(-folds) -> train_df
+      
+    valid_df %>%
+      select(-folds) -> valid_df
+      
+  # create matrices
+    train_df %>%
+      split_target_predictors(.,target_range = target_range) -> x_train
+    
+    valid_df %>%
+      split_target_predictors(.,target_range = target_range) -> x_valid
+  
+  # extract target and predictors
+    y_train <- x_train$target
+    x_train <- x_train$predictors
+  
+    y_valid <- x_valid$target
+    x_valid <- x_valid$predictors
+    
+  # Train model
+  history <- model %>% fit(
+      x_train, y_train,
+      epochs = epochs,
+      batch_size = batch_size, 
+      validation_split = validation_split)
+  
+  # Evaluate the model
+    model %>%
+      evaluate(x_valid,
+               y_valid,
+               batch_size = 128) -> score
+  
+  score %>%
+      as.data.frame() -> temporary
+      
+  result <- rbind(result,temporary)
+  }
+ cvsummary <- list("result"=result,
+                   "history"=history,
+                   "model"=model)   
+ return(cvsummary);
+}
 ```
 
