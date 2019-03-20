@@ -48,7 +48,7 @@ theme_set(theme_bw())
 <br>
 
 ```
-The response variable is the variable that you are interesting in making measurements and conclusions on.
+The response variable is the variable that you are interested in reaching conclusions about.
 
 A predictor variable is a variable used to predict another variable.
 
