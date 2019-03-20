@@ -2,25 +2,84 @@
 title: "Analysis with Regularization on Brazilian elections"
 subtitle: "Predictive analysis with regularization and Hyperparameter tuning on data about Brazilian elections"
 author: "José Benardi de Souza Nunes"
+date: 02/11/2018
 output:
-  html_notebook:
-    toc: yes
-    toc_float: yes
   html_document:
     df_print: paged
     toc: yes
     toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
 ---
 
+# Introduction
 
-```{r}
+<br>
+
+> Data Analysis with multivariate Linear Regression  on data about polls for the 2006 and 2010 elections in Brazil for the "Câmara Federal de Deputados". Data was taken from the [TSE portal](http://www.tse.jus.br/) and encompasses approximately 7300 candidates.
+
+<br>
+
+***
+
+<br>
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 library(dataPreparation)
 library(tidyverse)
 library(caret)
 library(here)
 ```
 
-# Load Data
+# Data Overview
+
+<br>
+
+## The variables
+
+<br>
+
+```
+The response variable is the variable that you are interested in reaching conclusions about.
+
+A predictor variable is a variable used to predict another variable.
+
+Our response variable will be "votos", we want to study how well the predictor variables can help predict its behavior and how they impact in the linear regression.
+```
+
+<br>
+
+#### Each item corresponds to a candidate, the attributes of each item are as follows:
+
+- **ano** : Year at which the election took place.
+- **sequencial_candidato** : Sequential ID to map the candidates
+- **nome** : Name of the candidate
+- **uf** : Federate state to which the candidate belongs.
+- **partido** : Political party to which the candidate belongs.
+- **quantidade_doacoes** : Number of donations received during political campaign.
+- **quantidade_doadores** : Number of donators that contributed to the candidate's political campaign.
+- **total_receita** : Total revenue. 
+- **media_receita** : Mean revenue. 
+- **recursos_de_outros_candidatos.comites** : Revenue coming from other candidate's committees.
+- **recursos_de_pessoas_fisicas** : Revenue coming from individuals.
+- **recursos_de_pessoas_juridicas** : Revenue coming from legal entities.
+- **recursos_proprios** : Revenue coming from personal resources.
+- **recursos_de_partido_politico** : Revenue coming from political party.
+- **quantidade_despesas** : Number of expenses.
+- **quantidade_fornecedores** : Number of suppliers.
+- **total_despesa** : Total expenditure. 
+- **media_despesa** : Mea expenditure.
+- **cargo** : Position.
+- **sexo** : Sex.
+- **grau** : Level of education.
+- **estado_civil** : Marital status. 
+- **ocupacao** : Candidate's occupation up to the election.
+- **votos** : Number of votes received.
+
+<br>
+
+## Loading Data
 
 ```{r}
 data <- readr::read_csv(
@@ -53,18 +112,8 @@ data <- readr::read_csv(
          sexo = as.factor(sexo),
          uf = as.factor(uf))
 
-# Adding surrogate key to dataframe
-data$id <- 1:nrow(data)
-
 data %>% 
   glimpse()
-```
-
-```{r}
-data %>%
-  map_df(function(x) sum(is.na(x))) %>%
-  gather(feature, num_nulls) %>%
-  arrange(desc(num_nulls))
 ```
 
 ```{r}
@@ -93,8 +142,22 @@ data_test <- readr::read_csv(
 
 data_test %>% 
   glimpse()
-
 ```
+
+<br>
+
+## Assessing data integrity
+
+### NA values
+
+```{r}
+data %>%
+  map_df(function(x) sum(is.na(x))) %>%
+  gather(feature, num_nulls) %>%
+  arrange(desc(num_nulls))
+```
+
+* No null values found
 
 ```{r}
 data_test %>%
@@ -103,28 +166,15 @@ data_test %>%
   arrange(desc(num_nulls))
 ```
 
+* No null values found
 
-<!-- ```{r} -->
-<!-- data_test %>% -->
-<!--   mutate(recursos_de_pessoas_juridicas = ifelse(is.na(recursos_de_pessoas_juridicas), -->
-<!--                                                mean(recursos_de_pessoas_juridicas, na.rm=TRUE), -->
-<!--                                                recursos_de_pessoas_juridicas), -->
-<!--          recursos_de_partido_politico = ifelse(is.na(recursos_de_partido_politico), -->
-<!--                                                mean(recursos_de_partido_politico, na.rm=TRUE), -->
-<!--                                                recursos_de_partido_politico), -->
-<!--          recursos_proprios = ifelse(is.na(recursos_proprios), -->
-<!--                                                mean(recursos_proprios, na.rm=TRUE), -->
-<!--                                                recursos_proprios), -->
-<!--          recursos_de_outros_candidatos.comites = ifelse(is.na(recursos_de_outros_candidatos.comites), -->
-<!--                                                mean(recursos_de_outros_candidatos.comites, na.rm=TRUE), -->
-<!--                                                recursos_de_outros_candidatos.comites), -->
-<!--          recursos_de_pessoas_fisicas = ifelse(is.na(recursos_de_pessoas_fisicas), -->
-<!--                                                mean(recursos_de_pessoas_fisicas, na.rm=TRUE), -->
-<!--                                                recursos_de_pessoas_fisicas)) -> data_test -->
+<br>
 
-<!-- ``` -->
+### Encoding
 
-```{r results='asis'}
+We must apply the same encoding to the **data used for the competition test** and the data **we’ll use to build our models** in order to make sure the levels of the categorical variables across both datasets match.
+
+```{r}
 encoding <- build_encoding(dataSet = data,
                            cols = c("uf","sexo","grau","ocupacao",
                                     "partido","estado_civil"),
@@ -140,7 +190,9 @@ cat("#### Data Shape",
     "\n##### Variables: ",ncol(data))
 ```
 
-```{r results='asis'}
+<br>
+
+```{r}
 data_test <- one_hot_encoder(dataSet = data_test,
                            encoding = encoding,
                            drop = TRUE,
@@ -151,69 +203,7 @@ cat("#### Test Data Shape",
     "\n##### Variables: ",ncol(data_test))
 ```
 
-<!-- ```{r results='asis'} -->
-<!-- set.seed(11) # We set the set for reason of reproducibility -->
-
-<!-- data %>% -->
-<!--   dplyr::sample_frac(.6) -> data_train -->
-
-<!-- encoding <- build_encoding(dataSet = data_train, -->
-<!--                            cols = c("uf","sexo","grau","ocupacao", -->
-<!--                                     "partido","estado_civil"), -->
-<!--                            verbose = F) -->
-
-<!-- data_train <- one_hot_encoder(dataSet = data_train, -->
-<!--                            encoding = encoding, -->
-<!--                            drop = TRUE, -->
-<!--                            verbose = F) -->
-
-<!-- cat("#### Train Data ", -->
-<!--     "\n##### Observations: ",nrow(data_train), -->
-<!--     "\n##### Variables: ",ncol(data_train)) -->
-<!-- ``` -->
-
-<!-- <br> -->
-
-<!-- ```{r results='asis'} -->
-<!-- set.seed(11) # We set the set for reason of reproducibility -->
-
-<!-- dplyr::anti_join(data, -->
-<!--                  data_train, -->
-<!--                  by = 'id') -> intermediate_data -->
-
-<!-- intermediate_data %>% -->
-<!--   dplyr::sample_frac(.5) -> data_test -->
-
-<!-- data_test <- one_hot_encoder(dataSet = data_test, -->
-<!--                            encoding = encoding, -->
-<!--                            drop = TRUE, -->
-<!--                            verbose = F) -->
-
-<!-- cat("#### Test Data ", -->
-<!--     "\n##### Observations: ",nrow(data_test), -->
-<!--     "\n##### Variables: ",ncol(data_test)) -->
-<!-- ``` -->
-
-<!-- ```{r results='asis'} -->
-<!-- set.seed(11) # We set the set for reason of reproducibility -->
-
-<!-- dplyr::anti_join(intermediate_data, -->
-<!--                  data_test, -->
-<!--                  by = 'id') -> data_validate -->
-
-
-<!-- data_validate <- one_hot_encoder(dataSet = data_validate, -->
-<!--                            encoding = encoding, -->
-<!--                            drop = TRUE, -->
-<!--                            verbose = F) -->
-<!-- rm(intermediate_data) -->
-
-<!-- cat("#### Validate Data ", -->
-<!--     "\n##### Observations: ",nrow(data_validate), -->
-<!--     "\n##### Variables: ",ncol(data_validate)) -->
-<!-- ``` -->
-
-# Ridge
+<br>
 
 ```{r}
 data %>%
@@ -221,21 +211,30 @@ data %>%
   tibble::rownames_to_column("variable") %>%
   filter(nzv == T) %>% 
   pull(variable) -> near_zero_vars
+
+near_zero_vars %>% 
+  glimpse() 
 ```
 
+* These predictors have a near zero variance, so they behave much like a constant. Predictors that remain constant have no impact on the response variable and for that reason are not useful.
+
+> Following this information we shall exclude predictors of near zero variance and zero variance from our models.
+
+<br>
+
+***
+
+<br>
+
+# Ridge
+
+<br>
+
+* Let’s employ linear regression with regularization through the Ridge method and tune the hyperparameter $\lambda \ (lambda)$
+
 ```{r}
-# 
-# model.cv <- train(mpg ~ ., 
-#                data = mtcars,
-#                method = "lasso",
-#                trControl = fitControl)
-# 
+set.seed(131)
 
-# boot", "boot632", "cv", "repeatedcv", "LOOCV", "LGOCV"
-```
-
-
-```{r}
 lambdaGrid <- expand.grid(lambda = 10^seq(10, -2, length=100))
 
 fitControl <- trainControl(## 10-fold CV
@@ -244,7 +243,7 @@ fitControl <- trainControl(## 10-fold CV
 
 data %>%
   select(-one_of(near_zero_vars)) %>%
-  select(-ano,-id, -nome) %>%
+  select(-ano,-nome) %>%
   train(votos ~ .,
         data = .,
         method = "ridge",
@@ -256,17 +255,47 @@ data %>%
 model.ridge
 ```
 
+* The best $RSME$ value was $35004.01$ and the corresponding best value for the hyperparameter $\lambda$ was $0.01$
+
 ```{r}
 model.ridge %>%
-  varImp() %>%
-  ggplot()
+  varImp() %$%
+  importance %>%
+  as.data.frame() %>%
+  rownames_to_column(var="Feature") %>%
+  mutate(Feature = tolower(Feature)) %>%
+  ggplot() +
+  geom_col(aes(x = reorder(Feature,Overall),
+               y = Overall)) + 
+  labs(x="Feature", y="Overall Importance") +
+  coord_flip()
 ```
+
+* We have **total_receita, total_despesa** and **recursos_de_pessoas_juridicas** as the three most important features.
+
+* The model ignored features such as **media_despesa, recursos_de_outros_candidatos.comites** and **recursos_proprios**.
+
+
+<br>
+
+***
+
+<br>
+
+# Lasso
+
+<br>
+
+Let’s employ linear regression with regularization through the Lasso method and tune the hyperparameter $\lambda \ (lambda)$ which in this package is made available as $fraction$.
+
 ```{r}
+set.seed(131)
+
 fractionGrid <- expand.grid(fraction = seq(1, 1e-2, length=100))
 
 data %>%
   select(-one_of(near_zero_vars)) %>%
-  select(-ano,-id, -nome) %>%
+  select(-ano,-nome) %>%
   train(votos ~ .,
         data = .,
         method = "lasso",
@@ -278,18 +307,46 @@ data %>%
 model.lasso
 ```
 
-```{r}
-model.lasso %>%
-  varImp() %>%
-  ggplot()
-```
+* The best $RSME$ value was $35052.40$ and the corresponding best value for the hyperparameter $fraction$ was $0.47$
 
 ```{r}
+model.lasso %>%
+  varImp() %$%
+  importance %>%
+  as.data.frame() %>%
+  rownames_to_column(var="Feature") %>%
+  mutate(Feature = tolower(Feature)) %>%
+  ggplot() +
+  geom_col(aes(x = reorder(Feature,Overall),
+               y = Overall)) + 
+  labs(x="Feature", y="Overall Importance") +
+  coord_flip()
+```
+
+* We have **total_receita, total_despesa** and **recursos_de_pessoas_juridicas** as the three most important features.
+
+* The model ignored features such as **media_despesa, recursos_de_outros_candidatos.comites** and **recursos_proprios**.
+
+<br>
+
+***
+
+<br>
+
+# k nearest neighbors
+
+<br>
+
+* Let’s employ the non parametric **k nearest neighbors** regression and tune the hyperparameter 
+
+```{r}
+set.seed(131)
+
 neighborsGrid <- expand.grid(k = seq(1, 100, length=100))
 
 data %>%
   select(-one_of(near_zero_vars)) %>%
-  select(-ano,-id, -nome) %>%
+  select(-ano,-nome) %>%
   train(votos ~ .,
         data = .,
         method = "knn",
@@ -301,21 +358,77 @@ data %>%
 model.knn
 ```
 
-```{r}
-model.knn %>%
-  varImp() %>%
-  ggplot()
-```
+* The best $RSME$ value was $34289.06$ and the corresponding best value for the hyperparameter $k$ was $16$
 
 ```{r}
+model.knn %>%
+  varImp() %$%
+  importance %>%
+  as.data.frame() %>%
+  rownames_to_column(var="Feature") %>%
+  mutate(Feature = tolower(Feature)) %>%
+  ggplot() +
+  geom_col(aes(x = reorder(Feature,Overall),
+               y = Overall)) + 
+  labs(x="Feature", y="Overall Importance") +
+  coord_flip()
+```
+
+* We have **total_receita, total_despesa** and **recursos_de_pessoas_juridicas** as the three most important features.
+
+* The model paid little attention to features such as **media_despesa, recursos_de_outros_candidatos.comites** and **recursos_proprios**.
+
+<br>
+
+***
+
+<br>
+
+# Comparison between models
+
+<br>
+
+## Importance of Features
+
+<br>
+
+Across the different models there was considerable consensus regarding importance of features. The following statements do encompass both Lasso and Ridge:
+
+* **total_receita, total_despesa** and **recursos_de_pessoas_juridicas** were pointed as the most important features
+
+* **media_despesa, recursos_de_outros_candidatos.comites** and **recursos_proprios** were ignored.
+
+<br>
+
+## Quality Measures (RMSE)
+
+* **Ridge**: RSME = 35004.01
+* **Lasso**: RSME = 35052.40
+* **KNN**: RSME = 34289.06
+
+>The best performing model was KNN, which will be trained with its optimal hyperparameter set (k = 16).
+
+<br>
+
+***
+
+<br>
+
+# Final model
+
+<br>
+
+```{r}
+set.seed(131)
+
 data %>%
   select(-one_of(near_zero_vars)) %>%
-  select(-ano,-id, -nome) %>%
+  select(-ano,-nome) %>%
   train(votos ~ .,
         data = .,
         method = "knn",
         na.action = na.omit,
-        tuneGrid = data.frame(k = 12),
+        tuneGrid = data.frame(k = 16),
         trControl = trainControl(method="none"),
         preProcess = c('scale', 'center')) -> model.knn.best
 
@@ -323,45 +436,44 @@ model.knn.best
 ```
 
 ```{r}
-control <- trainControl(method="cv",
-                        number=10,
-                        search="grid")
-set.seed(113)
-
-tunegrid <- expand.grid(.mtry=c(1:50))
-
-data %>%
-  select(-one_of(near_zero_vars)) %>%
-  select(-ano,-id, -nome) %>%
-  train(votos ~.,
-        data=.,
-        method="rf",
-        trControl=control,
-        tuneGrid=tunegrid,
-        na.action = na.omit,
-        preProcess = c('scale', 'center')) -> model.rf
-
-model.rf
+model.knn.best %>%
+  varImp() %$%
+  importance %>%
+  as.data.frame() %>%
+  rownames_to_column(var="Feature") %>%
+  mutate(Feature = tolower(Feature)) %>%
+  ggplot() +
+  geom_col(aes(x = reorder(Feature,Overall),
+               y = Overall)) + 
+  labs(x="Feature", y="Overall Importance") +
+  coord_flip()
 ```
 
+* We have **total_receita, total_despesa** and **recursos_de_pessoas_juridicas** as the three most important features.
 
+* The model paid little attention to features such as **media_despesa, recursos_de_outros_candidatos.comites** and **recursos_proprios**.
+
+<br>
+
+## Making actual predictions
 
 ```{r}
-data_test %>% 
+data_test %>%
   mutate(sequencial_candidato = as.character(sequencial_candidato)) %>%
   pull(sequencial_candidato) -> id_column
 
 predict(model.knn.best, data_test) -> predictions
 
 data.frame(ID = id_column,
-           votos = predictions) -> submissão
+           votos = predictions) -> submission
 
-submissão %>%
+submission %>%
   glimpse()
 ```
 
 ```{r}
-write_csv(submissão,
+write_csv(submission,
           here::here('data/submission.csv'))
 ```
+
 
